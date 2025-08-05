@@ -3,6 +3,10 @@ import React, { useEffect, useState } from 'react';
 import { Progress } from '@/components/ui/progress';
 import TaskCard from '@/components/TaskCard';
 import checklistData from '@/data/sampleChecklist';
+import CountUp from 'react-countup';
+import { ChecklistGenerator } from '@/utils/ChecklistGenerator';
+import ReactMarkdown from 'react-markdown';
+import { ChecklistItem, OnboardingChecklist, User } from '@/types/User';
 
 interface Task {
   id: string;
@@ -14,25 +18,105 @@ interface Task {
   dueDate?: string;
 }
 
-const Dashboard = () => {
-  const [taskList, setTaskList] = useState<Task[]>([]);
+interface GitHubStats {
+  commits: number;
+  pullRequests: number;
+  deployments: number;
+  loc: number;
+}
+
+const mockUser: User = {
+  id: 'user_001',
+  name: 'Alex Dev',
+  role: 'intern',
+  department: 'engineering',
+  level: 'junior',
+  email: 'alex.dev@example.com',
+  startDate: '2024-06-01',
+};
+
+const Dashboard2 = () => {
+  const [taskList, setTaskList] = useState<ChecklistItem[]>([]);
   const [progress, setProgress] = useState(0);
+  const [gistContent, setGistContent] = useState('');
+  const [githubStats, setGithubStats] = useState<GitHubStats>({
+    commits: 0,
+    pullRequests: 0,
+    deployments: 0,
+    loc:0,
+  });
+  const [generatedDocs, setGeneratedDocs] = useState('');
 
   useEffect(() => {
-    const mappedChecklist = checklistData.map(task => ({
-      ...task,
-      priority: (["low", "medium", "high"].includes(task.priority)
-        ? task.priority
-        : "low") as "low" | "medium" | "high",
-    }));
-    setTaskList(mappedChecklist);
-    calculateProgress(mappedChecklist);
+    const generator = new ChecklistGenerator();
+    const checklist: OnboardingChecklist = generator.generateChecklist(mockUser);
+
+    setTaskList(checklist.items);
+    calculateProgress(checklist.items);
+    fetchGist();
+    fetchGitHubStats();
   }, []);
 
-  const calculateProgress = (tasks: Task[]) => {
-    const done = tasks.filter(t => t.completed).length;
+  const calculateProgress = (tasks: ChecklistItem[]) => {
+    const done = tasks.filter((t) => t.completed).length;
     setProgress(Math.round((done / tasks.length) * 100));
   };
+
+  const fetchGist = async () => {
+    try {
+      const res = await fetch('https://gist.githubusercontent.com/MASTERxD-2/b2f14800bcf1f8fefcfc5ba7a4e5cade/raw/example.ts');
+      const text = await res.text();
+      console.log("Fetched Gist content:", text);
+      setGistContent(text);
+    } catch (err) {
+      console.error('Failed to fetch Gist:', err);
+    }
+  };
+
+  const fetchGitHubStats = async () => {
+  try {
+    const username = 'MASTERxD-2';
+    const repo = 'UNISYNC_';
+
+    const commitsRes = await fetch(`https://api.github.com/repos/${username}/${repo}/commits`);
+    const commitsData = await commitsRes.json();
+
+    let totalLOC = 0;
+    const activeDates = new Set<string>();
+
+    // Only fetch stats for first N commits to avoid rate limits
+    const commitsToCheck = commitsData.slice(0, 10); // You can increase to 30 if needed
+
+    for (const commit of commitsToCheck) {
+      const commitRes = await fetch(commit.url);
+      const commitDetails = await commitRes.json();
+
+      if (commitDetails.stats) {
+        totalLOC += commitDetails.stats.additions + commitDetails.stats.deletions;
+      }
+
+      if (commit.commit?.author?.date) {
+        const date = new Date(commit.commit.author.date).toDateString();
+        activeDates.add(date);
+      }
+    }
+
+    const pullsRes = await fetch(`https://api.github.com/repos/${username}/${repo}/pulls?state=all`);
+    const pullsData = await pullsRes.json();
+
+    const deployments = Math.floor(Math.random() * 10); // Mocked
+
+    setGithubStats({
+      commits: commitsData.length,
+      pullRequests: pullsData.length,
+      deployments,
+      loc: totalLOC,
+    });
+  } catch (err) {
+    console.error('Failed to fetch GitHub stats:', err);
+  }
+};
+
 
   const toggleTask = (taskId: string) => {
     const updated = taskList.map(task =>
@@ -41,43 +125,37 @@ const Dashboard = () => {
     setTaskList(updated);
     calculateProgress(updated);
   };
-
   return (
-    <div className="min-h-screen flex flex-col bg-white">
-      {/* Header */}
-      <header className="text-gray-600 body-font shadow bg-white">
-  <div className="container mx-auto flex flex-wrap p-5 flex-row items-center justify-between">
-    {/* Left: Logo */}
-    <a className="flex title-font font-medium items-center text-gray-900">
-      <img src="/logo.png" alt="Synchrony Logo" className="h-12 w-auto" />
-      <span className="ml-3 text-2xl font-semibold"></span>
-    </a>
+    <div className="min-h-screen bg-white">
+  {/* Fixed Header */}
+  <header className="fixed top-0 left-0 right-0 z-50 text-gray-600 body-font shadow bg-white h-20">
+    <div className="container mx-auto flex items-center justify-between h-full px-6">
+      {/* Logo */}
+      <a className="flex items-center text-gray-900 font-medium">
+        <img src="/logo.png" alt="Synchrony Logo" className="h-12 w-auto" />
+        <span className="ml-3 text-2xl font-semibold"></span>
+      </a>
 
-    {/* Right: Profile + Logout */}
-    <div className="flex items-center space-x-4">
-      <img
-        src="/profile.png" // Replace with actual profile image path or dynamic user image
-        alt="Profile"
-        className="h-10 w-10 rounded-full border border-gray-300 object-cover"
-      />
-      <button
-        className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md text-sm font-medium"
-        onClick={() => {
-          // handle logout logic here
-          console.log("Logged out");
-        }}
-      >
-        Logout
-      </button>
+      {/* Profile & Logout */}
+      <div className="flex items-center space-x-4">
+        <img
+          src="/profile.png"
+          alt="Profile"
+          className="h-10 w-10 rounded-full border border-gray-300 object-cover"
+        />
+        <a href="#" className="inline-block rounded-lg px-4 py-3 text-center text-sm font-semibold text-black outline-none ring-yellow-300 transition duration-100 hover:text-yellow-500 focus-visible:ring active:text-yellow-600 md:text-base">Settings</a>
+
+        <a href="#" className="inline-block rounded-lg bg-yellow-500 px-8 py-3 text-center text-sm font-semibold text-white outline-none ring-yellow-300 transition duration-100 hover:bg-yellow-600 focus-visible:ring active:bg-yellow-700 md:text-base">Logout</a>
+      </div>
     </div>
-  </div>
-</header>
+  </header>
 
-
-      <aside id="default-sidebar" className="fixed top-0 left-0 z-40 w-64 h-screen transition-transform -translate-x-full sm:translate-x-0" aria-label="Sidebar">
-   <div className="h-full px-3 py-4 overflow-y-auto bg-gray-50 dark:bg-black">
+  {/* Sidebar */}
+  <aside id="default-sidebar" className="hidden sm:block fixed top-20 left-0 z-40 mr-3 w-64 h-[calc(100vh-5rem)] bg-gray-50 dark:bg-black" aria-label="Sidebar">
+    <div className="h-full px-3 py-4 overflow-y-auto">
       <ul className="space-y-2 font-medium">
-         <li>
+        {/* Sidebar items as-is */}
+        <li>
             <a href="#" className="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group">
                <svg className="w-5 h-5 text-gray-500 transition duration-75 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 22 21">
                   <path d="M16.975 11H10V4.025a1 1 0 0 0-1.066-.998 8.5 8.5 0 1 0 9.039 9.039.999.999 0 0 0-1-1.066h.002Z"/>
@@ -121,115 +199,178 @@ const Dashboard = () => {
             </a>
          </li>
       </ul>
-   </div>
-</aside>
-      <section className="text-gray-600 body-font">
-        <div className="container px-5 py-24 mx-auto">
-        <div className="flex flex-wrap w-full mb-20 flex-col items-center text-center">
-            <h1 className="sm:text-3xl text-2xl font-medium title-font mb-2 text-gray-900">Get Started</h1>
-            <p className="lg:w-1/2 w-full leading-relaxed text-gray-500">Welcome to Synchrony!</p>
-        </div>
-        <div className="flex flex-wrap -m-4">
-            <div className="xl:w-1/3 md:w-1/2 p-4">
-                <div className="border border-gray-200 p-6 rounded-lg">
-                    <div className="w-10 h-10 inline-flex items-center justify-center rounded-full bg-yellow-100 text-yellow-500 mb-4">
-                        <svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" className="w-6 h-6" viewBox="0 0 24 24">
-                        <path d="M22 12h-4l-3 9L9 3l-3 9H2"></path>
-                        </svg>
-                    </div>
-                    <h2 className="text-lg text-gray-900 font-medium title-font mb-2">Shooting Stars</h2>
-                    <p className="leading-relaxed text-base">Fingerstache flexitarian street art 8-bit waist co, subway tile poke farm.</p>
-                </div>
-            </div>
+    </div>
+  </aside>
+  <main className="pt-20 sm:ml-64 px-6">
+    {/* Your actual content goes here */}
+    
+      <section className="text-gray-600 body-font mt-10 ml-6">
+  <div className="container px-5 py-24 mx-auto">
+    <div className="flex flex-wrap w-full mb-20 flex-col items-center text-center">
+      <h1 className="sm:text-3xl text-2xl font-medium title-font mb-2 text-gray-900">Welcome Back!</h1>
+      <p className="lg:w-1/2 w-full leading-relaxed text-gray-500">Explore active developer projects at Synchrony</p>
+    </div>
+
+    <div className="flex flex-wrap -m-4">
+      {/* Project 1 */}
       <div className="xl:w-1/3 md:w-1/2 p-4">
         <div className="border border-gray-200 p-6 rounded-lg">
           <div className="w-10 h-10 inline-flex items-center justify-center rounded-full bg-yellow-100 text-yellow-500 mb-4">
-            <svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" className="w-6 h-6" viewBox="0 0 24 24">
+            {/* Icon */}
+            <svg fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" className="w-6 h-6" viewBox="0 0 24 24">
+              <path d="M22 12h-4l-3 9L9 3l-3 9H2"></path>
+            </svg>
+          </div>
+          <h2 className="text-lg text-gray-900 font-medium title-font mb-2">UNISYNC Calendar Integration</h2>
+          <p className="leading-relaxed text-base">Automating calendar synchronization for faculty and students across departments with Google Calendar and Outlook APIs.</p>
+        </div>
+      </div>
+
+      {/* Project 2 */}
+      <div className="xl:w-1/3 md:w-1/2 p-4">
+        <div className="border border-gray-200 p-6 rounded-lg">
+          <div className="w-10 h-10 inline-flex items-center justify-center rounded-full bg-yellow-100 text-yellow-500 mb-4">
+            <svg fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" className="w-6 h-6" viewBox="0 0 24 24">
               <circle cx="6" cy="6" r="3"></circle>
               <circle cx="6" cy="18" r="3"></circle>
               <path d="M20 4L8.12 15.88M14.47 14.48L20 20M8.12 8.12L12 12"></path>
             </svg>
           </div>
-          <h2 className="text-lg text-gray-900 font-medium title-font mb-2">The Catalyzer</h2>
-          <p className="leading-relaxed text-base">Fingerstache flexitarian street art 8-bit waist co, subway tile poke farm.</p>
+          <h2 className="text-lg text-gray-900 font-medium title-font mb-2">Developer Analytics Dashboard</h2>
+          <p className="leading-relaxed text-base">Visual dashboard showing commits, PRs, LOC, and deployments across GitHub repos using GitHub GraphQL API.</p>
         </div>
       </div>
+
+      {/* Project 3 */}
       <div className="xl:w-1/3 md:w-1/2 p-4">
         <div className="border border-gray-200 p-6 rounded-lg">
           <div className="w-10 h-10 inline-flex items-center justify-center rounded-full bg-yellow-100 text-yellow-500 mb-4">
-            <svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" className="w-6 h-6" viewBox="0 0 24 24">
+            <svg fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" className="w-6 h-6" viewBox="0 0 24 24">
               <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"></path>
               <circle cx="12" cy="7" r="4"></circle>
             </svg>
           </div>
-          <h2 className="text-lg text-gray-900 font-medium title-font mb-2">Neptune</h2>
-          <p className="leading-relaxed text-base">Fingerstache flexitarian street art 8-bit waist co, subway tile poke farm.</p>
+          <h2 className="text-lg text-gray-900 font-medium title-font mb-2">Real-Time Chat System</h2>
+          <p className="leading-relaxed text-base">Socket.IO-powered messaging platform for team communication and project collaboration with notifications.</p>
         </div>
       </div>
+
+      {/* Project 4 */}
       <div className="xl:w-1/3 md:w-1/2 p-4">
         <div className="border border-gray-200 p-6 rounded-lg">
           <div className="w-10 h-10 inline-flex items-center justify-center rounded-full bg-yellow-100 text-yellow-500 mb-4">
-            <svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" className="w-6 h-6" viewBox="0 0 24 24">
+            <svg fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" className="w-6 h-6" viewBox="0 0 24 24">
               <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1zM4 22v-7"></path>
             </svg>
           </div>
-          <h2 className="text-lg text-gray-900 font-medium title-font mb-2">Melanchole</h2>
-          <p className="leading-relaxed text-base">Fingerstache flexitarian street art 8-bit waist co, subway tile poke farm.</p>
+          <h2 className="text-lg text-gray-900 font-medium title-font mb-2">Code Review Engine</h2>
+          <p className="leading-relaxed text-base">Automated tool that analyzes PRs, detects code smells, and suggests improvements using OpenAI Codex API.</p>
         </div>
       </div>
+
+      {/* Project 5 */}
       <div className="xl:w-1/3 md:w-1/2 p-4">
         <div className="border border-gray-200 p-6 rounded-lg">
           <div className="w-10 h-10 inline-flex items-center justify-center rounded-full bg-yellow-100 text-yellow-500 mb-4">
-            <svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" className="w-6 h-6" viewBox="0 0 24 24">
+            <svg fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" className="w-6 h-6" viewBox="0 0 24 24">
               <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"></path>
             </svg>
           </div>
-          <h2 className="text-lg text-gray-900 font-medium title-font mb-2">Bunker</h2>
-          <p className="leading-relaxed text-base">Fingerstache flexitarian street art 8-bit waist co, subway tile poke farm.</p>
+          <h2 className="text-lg text-gray-900 font-medium title-font mb-2">Smart Meeting Scheduler</h2>
+          <p className="leading-relaxed text-base">AI-powered scheduling tool that finds optimal meeting times based on availability and workload.</p>
         </div>
       </div>
+
+      {/* Project 6 */}
       <div className="xl:w-1/3 md:w-1/2 p-4">
         <div className="border border-gray-200 p-6 rounded-lg">
           <div className="w-10 h-10 inline-flex items-center justify-center rounded-full bg-yellow-100 text-yellow-500 mb-4">
-            <svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" className="w-6 h-6" viewBox="0 0 24 24">
+            <svg fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" className="w-6 h-6" viewBox="0 0 24 24">
               <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
             </svg>
           </div>
-          <h2 className="text-lg text-gray-900 font-medium title-font mb-2">Ramona Falls</h2>
-          <p className="leading-relaxed text-base">Fingerstache flexitarian street art 8-bit waist co, subway tile poke farm.</p>
+          <h2 className="text-lg text-gray-900 font-medium title-font mb-2">CI/CD Pipeline Builder</h2>
+          <p className="leading-relaxed text-base">Drag-and-drop interface to configure GitHub Actions or Jenkins pipelines for automated testing and deployment.</p>
         </div>
       </div>
     </div>
-    <button className="flex mx-auto mt-16 text-white bg-yellow-500 border-0 py-2 px-8 focus:outline-none hover:bg-yellow-600 rounded text-lg">Button</button>
+
+    <button className="flex mx-auto mt-16 text-white bg-yellow-500 border-0 py-2 px-8 focus:outline-none hover:bg-yellow-600 rounded text-lg">
+      View All Projects
+    </button>
   </div>
 </section>
-<section className="mx-auto max-w-screen-2xl px-4 md:px-8">
+
+
+<div className="bg-white py-6 sm:py-8 lg:py-12">
+  <div className="mx-auto max-w-screen-xl px-4 md:px-8">
+
+    <div className="mb-8 md:mb-12">
+      <h2 className="mb-4 text-center text-2xl font-bold text-gray-800 md:mb-6 lg:text-3xl">Developer Productivity Stats</h2>
+      <p className="mx-auto max-w-screen-md text-center text-gray-500 md:text-lg">Track your tasks and productivity stats below.</p>
+    </div>
+    <div className="grid grid-cols-2 gap-4 md:grid-cols-4 lg:gap-8">
+
+  <div className="flex flex-col items-center justify-center rounded-lg bg-gray-100 p-4 lg:p-8">
+    <div className="text-xl font-bold text-yellow-500 sm:text-2xl md:text-3xl">
+      <CountUp end={githubStats.commits} duration={1.5} />
+    </div>
+    <div className="text-sm font-semibold sm:text-base">Commits</div>
+  </div>
+
+  <div className="flex flex-col items-center justify-center rounded-lg bg-gray-100 p-4 md:p-8">
+    <div className="text-xl font-bold text-yellow-500 sm:text-2xl md:text-3xl">
+      <CountUp end={githubStats.deployments} duration={1.5} />
+    </div>
+    <div className="text-sm font-semibold sm:text-base">Deployments</div>
+  </div>
+
+  <div className="flex flex-col items-center justify-center rounded-lg bg-gray-100 p-4 md:p-8">
+    <div className="text-xl font-bold text-yellow-500 sm:text-2xl md:text-3xl">
+      <CountUp end={githubStats.pullRequests} duration={1.5} />
+    </div>
+    <div className="text-sm font-semibold sm:text-base">Pull Requests</div>
+  </div>
+
+  <div className="flex flex-col items-center justify-center rounded-lg bg-gray-100 p-4 md:p-8">
+    <div className="text-xl font-bold text-yellow-500 sm:text-2xl md:text-3xl">
+      <CountUp end={githubStats.loc} duration={2.5} separator="," />
+    </div>
+    <div className="text-sm font-semibold sm:text-base">Lines of Code</div>
+  </div>
+
+</div>
+
+  </div>
+</div>
+
+<section className="mx-auto max-w-screen-2xl px-4 md:px-8 ">
     <div className="mb-8 flex flex-wrap justify-between md:mb-16">
       <div className="mb-6 flex w-full flex-col justify-center sm:mb-12 lg:mb-0 lg:w-1/3 lg:pb-24 lg:pt-48">
         <h1 className="mb-4 text-4xl font-bold text-black sm:text-5xl md:mb-8 md:text-6xl">Finish your<br />Onboarding</h1>
 
-        <p className="max-w-md leading-relaxed text-gray-500 xl:text-lg">This is a section of some simple filler text, also known as placeholder text. It shares characteristics of real text.</p>
+        <p className="max-w-md leading-relaxed text-gray-500 xl:text-lg">
+          Welcome to Synchrony! Our onboarding and preboarding processes are designed to ensure every developer hits the ground running. From setting up your development environment to understanding team workflows and tools, everything is streamlined to help you feel confident and connected from day one.
+        </p>
       </div>
 
       <div className="mb-12 flex w-full md:mb-16 lg:w-2/3">
         <div className="relative left-12 top-12 z-10 -ml-12 overflow-hidden rounded-lg bg-gray-100 shadow-lg md:left-16 md:top-16 lg:ml-0">
-          <img src="https://images.unsplash.com/photo-1542340916-951bb72c8f74?auto=format&q=75&fit=crop&w=550&h=550" loading="lazy" alt="Photo by Kaung Htet" className="h-full w-full object-cover object-center" />
+          <img src="/onboarding.png" loading="lazy" alt="Onboarding" className="h-full w-full object-cover object-center" />
         </div>
 
         <div className="overflow-hidden rounded-lg bg-gray-100 shadow-lg">
-          <img src="https://images.unsplash.com/photo-1586295166487-b265f7e83a7f?auto=format&q=75&fit=crop&w=550&h=550" loading="lazy" alt="Photo by Manny Moreno" className="h-full w-full object-cover object-center" />
+          <img src="/onboarding_3.png" loading="lazy" alt="Onboarding" className="h-full w-full object-cover object-center" />
         </div>
       </div>
     </div>
 
     <div className="flex flex-col items-center justify-between gap-8 md:flex-row">
       <div className="flex h-12 w-64 divide-x overflow-hidden rounded-lg border">
-        <a href="#" className="flex w-1/3 items-center justify-center text-gray-500 transition duration-100 hover:bg-gray-100 active:bg-gray-200">Men</a>
-        <a href="#" className="flex w-1/3 items-center justify-center text-gray-500 transition duration-100 hover:bg-gray-100 active:bg-gray-200">Women</a>
-        <a href="#" className="flex w-1/3 items-center justify-center text-gray-500 transition duration-100 hover:bg-gray-100 active:bg-gray-200">Teens</a>
+        <a href="#" className="flex w-1/2 items-center justify-center bg-yellow-300 text-black transition duration-100 hover:bg-yellow-100 active:bg-yellow">Pre-boarding</a>
+        <a href="#" className="flex w-1/2 items-center justify-center bg-yellow-300 text-black transition duration-100 hover:bg-yellow-100 active:bg-yellow">Onboarding</a>
       </div>
 
-     
       <div className="flex items-center justify-center gap-4 lg:justify-start">
         <span className="text-sm font-semibold uppercase tracking-widest text-gray-400 sm:text-base">Social</span>
         <span className="h-px w-12 bg-gray-200"></span>
@@ -259,26 +400,41 @@ const Dashboard = () => {
   </section>
   <div className="bg-white py-6 sm:py-8 lg:py-12">
   <div className="mx-auto max-w-screen-2xl px-4 md:px-8">
-    <div className="flex flex-col overflow-hidden rounded-lg bg-gray-900 sm:flex-row md:h-80">
-    
-      <div className="flex w-full flex-col p-4 sm:w-1/2 sm:p-8 lg:w-2/5">
-        <h2 className="mb-4 text-xl font-bold text-white md:text-2xl lg:text-4xl">Current<br />Project</h2>
+  <div className="flex flex-col overflow-hidden rounded-2xl bg-gray-900 shadow-xl sm:flex-row md:h-96">
 
-        <p className="mb-8 max-w-md text-gray-400">This is a section of some simple filler text, also known as placeholder text. It shares some characteristics of a real written text.</p>
+    {/* Text Content */}
+    <div className="flex w-full flex-col justify-between p-6 sm:w-1/2 lg:w-2/5 lg:p-10">
+      <h2 className="text-2xl font-extrabold text-white md:text-3xl lg:text-4xl leading-tight">
+        Ongoing<br />Project
+      </h2>
 
-        <div className="mt-auto">
-          <a href="#" className="inline-block rounded-lg bg-white px-8 py-3 text-center text-sm font-semibold text-gray-800 outline-none ring-indigo-300 transition duration-100 hover:bg-gray-100 focus-visible:ring active:bg-gray-200 md:text-base">View Code</a>
-        </div>
-      </div>
-      
-      <div className="order-first h-48 w-full bg-gray-700 sm:order-none sm:h-auto sm:w-1/2 lg:w-3/5">
-        <img src="https://images.unsplash.com/photo-1505846951821-e25bacf2eccd?auto=format&q=75&fit=crop&crop=top&w=1000&h=500" loading="lazy" alt="Photo by Dom Hill" className="h-full w-full object-cover object-center" />
-      </div>
+      <p className="mt-4 mb-6 text-sm text-gray-300 md:text-base lg:text-lg">
+        The current project at Synchrony focuses on building a unified developer productivity dashboard. It integrates GitHub activities, deployment pipelines, and collaboration metrics to provide real-time insights that help teams work smarter and deliver faster.
+      </p>
 
+      <a
+        href="#"
+        className="inline-block w-max rounded-md bg-white px-6 py-2.5 text-sm font-semibold text-gray-800 transition duration-200 hover:bg-gray-100 focus:outline-none focus-visible:ring focus-visible:ring-yellow-300 active:bg-gray-200 md:text-base"
+      >
+        View Code
+      </a>
     </div>
+
+    {/* Image Section */}
+    <div className="order-first h-56 w-full sm:order-none sm:h-auto sm:w-1/2 lg:w-3/5">
+      <img
+        src="/project_2.png"
+        loading="lazy"
+        alt="Project Image"
+        className="h-full w-full object-cover object-center"
+      />
+    </div>
+
   </div>
 </div>
 
+</div>
+  </main>
       {/* Main Content */}
       <main className="flex-grow">
         <div className="max-w-4xl mx-auto px-4 py-10">
@@ -315,4 +471,4 @@ const Dashboard = () => {
   );
 };
 
-export default Dashboard;
+export default Dashboard2;
