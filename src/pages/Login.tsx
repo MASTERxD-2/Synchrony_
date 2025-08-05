@@ -6,8 +6,9 @@ const LoginPage = () => {
 
   const handleLogin = (e) => {
     e.preventDefault();
-    // TODO: handle actual login logic here
-    navigate('/onboarding'); // redirect after login
+    
+    
+    navigate('/onboarding'); 
   };
 
   return (
