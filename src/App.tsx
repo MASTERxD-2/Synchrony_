@@ -10,6 +10,8 @@ import AdminPanel from "./components/AdminPanel";
 import LoginPage from "./pages/Login";
 import Preboarding from "./pages/Preboard";
 import Dashboard from "./pages/Dashboard";
+import Onboarding from "./pages/OnboardingPage";
+import RegistrationPage from "./pages/Registration";
 
 const queryClient = new QueryClient();
 
@@ -26,6 +28,8 @@ const App = () => (
           <Route path="/login" element={<LoginPage />} />
           <Route path="/preboarding" element={<Preboarding />} />
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/onboardingpage" element={<Onboarding />} />
+          <Route path="/registration" element={<RegistrationPage />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

@@ -1,35 +1,21 @@
-// src/components/TaskCard.tsx
 import React from 'react';
-import { Checkbox } from '@/components/ui/checkbox';
+import { Checkbox } from "@/components/ui/checkbox";
 
-interface TaskProps {
-  task: {
-    id: string;
-    title: string;
-    description: string;
-    category: string;
-    completed: boolean;
-    priority: string;
-    dueDate?: string;
-  };
+interface Props {
+  task: any;
   toggle: () => void;
 }
 
-const TaskCard: React.FC<TaskProps> = ({ task, toggle }) => {
+const TaskCard: React.FC<Props> = ({ task, toggle }) => {
   return (
-    <div className="bg-white rounded-lg shadow p-4 flex items-start space-x-4 border">
+    <div className="border p-4 rounded-lg shadow-sm flex items-start space-x-4 bg-white hover:bg-gray-50">
       <Checkbox checked={task.completed} onCheckedChange={toggle} />
-      <div>
-        <h3 className={`font-semibold ${task.completed ? 'line-through text-gray-400' : ''}`}>
-          {task.title}
-        </h3>
-        <p className="text-sm text-gray-600">{task.description}</p>
-        <p className="text-xs mt-1 text-gray-500">
-          Category: {task.category} | Priority: {task.priority}
-        </p>
-        {task.dueDate && (
-          <p className="text-xs text-orange-600">Due: {new Date(task.dueDate).toLocaleDateString()}</p>
-        )}
+      <div className="flex-1">
+        <h3 className="text-lg font-semibold">{task.title}</h3>
+        <p className="text-gray-600">{task.description}</p>
+        <div className="text-sm text-gray-500 mt-1">
+          Priority: <span className="capitalize">{task.priority}</span>
+        </div>
       </div>
     </div>
   );
