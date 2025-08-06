@@ -1,4 +1,3 @@
-// File: src/pages/Dashboard.tsx
 import React, { useEffect, useState } from 'react';
 import { Progress } from '@/components/ui/progress';
 import TaskCard from '@/components/TaskCard';
@@ -10,6 +9,7 @@ import { ChecklistItem, OnboardingChecklist, User } from '@/types/User';
 import Sidebar from '@/components/Sidebar';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
+import ChatbotIntegrator from '@/components/ChatbotIntegrator';
 
 
 interface Task {
@@ -130,13 +130,14 @@ const Dashboard2 = () => {
     calculateProgress(updated);
   };
   return (
-    <div className="min-h-screen bg-white">
-  {/* Fixed Header */}
-    <Header />
+    <ChatbotIntegrator user={mockUser} tasks={taskList}>
+      <div className="min-h-screen bg-white">
+        {/* Fixed Header */}
+        <Header />
 
-  {/* Sidebar */}
-  <Sidebar />
-  <main className="pt-20 sm:ml-64 px-6">
+        {/* Sidebar */}
+        <Sidebar />
+        <main className="pt-20 sm:ml-64 px-6">
     {/* Your actual content goes here */}
     
       <section className="text-gray-600 body-font mt-10 ml-6">
@@ -366,15 +367,14 @@ const Dashboard2 = () => {
     </div>
 
   </div>
-</div>
+        </div>
 
-</div>
-  </main>
+        </div>
+        </main>
 
-      {/* Footer */}
-      <Footer />
-    </div>
+        {/* Footer */}
+        <Footer />
+      </div>
+    </ChatbotIntegrator>
   );
-};
-
-export default Dashboard2;
+};export default Dashboard2;

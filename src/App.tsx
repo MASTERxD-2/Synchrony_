@@ -12,28 +12,34 @@ import Preboarding from "./pages/Preboard";
 import Dashboard from "./pages/Dashboard";
 import Onboarding from "./pages/OnboardingPage";
 import RegistrationPage from "./pages/Registration";
+import EnhancedChatbot from "./components/EnhancedChatbot";
+import { ChatbotProvider } from "./contexts/ChatbotContext";
 
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/onboarding" element={<OnboardingPage />} />
-          <Route path="/admin" element={<AdminPanel />} />
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/preboarding" element={<Preboarding />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/onboardingpage" element={<Onboarding />} />
-          <Route path="/registration" element={<RegistrationPage />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
+      <ChatbotProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<Index />} />
+            <Route path="/onboarding" element={<OnboardingPage />} />
+            <Route path="/admin" element={<AdminPanel />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/preboarding" element={<Preboarding />} />
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/onboardingpage" element={<Onboarding />} />
+            <Route path="/registration" element={<RegistrationPage />} />
+            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+          {/* Enhanced Chatbot with context awareness */}
+          <EnhancedChatbot />
+        </BrowserRouter>
+      </ChatbotProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );

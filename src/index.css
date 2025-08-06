@@ -6,6 +6,24 @@
 All colors MUST be HSL.
 */
 
+/* Custom scrolling for chatbot */
+.chatbot-scroll-area [data-radix-scroll-area-viewport] {
+  overflow-y: auto !important;
+  max-height: 100% !important;
+}
+
+.chatbot-scroll-area {
+  height: 100% !important;
+}
+
+/* Improved text wrapping for chatbot messages */
+.chatbot-message {
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  hyphens: auto;
+  max-width: 100%;
+}
+
 @layer base {
   :root {
     --background: 0 0% 100%;
