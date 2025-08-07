@@ -19,6 +19,7 @@ import {
   loadOnboardingChecklist, 
   OnboardingChecklistData 
 } from '@/lib/checklistHelpers';
+import { Link } from "react-router-dom";
 
 
 interface Task {
@@ -383,12 +384,7 @@ const Dashboard2 = () => {
   const OnboardingComponent = () => (
     <div className="mt-8">
       <div className="flex justify-between items-center mb-6 max-w-4xl mx-auto">
-        <button
-          onClick={() => setCurrentView('dashboard')}
-          className="bg-gray-600 hover:bg-gray-700 text-white font-semibold px-4 py-2 rounded-md transition-colors duration-200"
-        >
-          Back to Dashboard
-        </button>
+        
       </div>
       <OnboardingDashboard user={mockUser} />
     </div>
@@ -423,7 +419,7 @@ const Dashboard2 = () => {
               <path d="M22 12h-4l-3 9L9 3l-3 9H2"></path>
             </svg>
           </div>
-          <h2 className="text-lg text-gray-900 font-medium title-font mb-2">UNISYNC Calendar Integration</h2>
+          <h2 className="text-lg text-gray-900 font-medium title-font mb-2">Calendar Integration</h2>
           <p className="leading-relaxed text-base">Automating calendar synchronization for faculty and students across departments with Google Calendar and Outlook APIs.</p>
         </div>
       </div>
@@ -497,9 +493,12 @@ const Dashboard2 = () => {
       </div>
     </div>
 
-    <button className="flex mx-auto mt-16 text-white bg-yellow-500 border-0 py-2 px-8 focus:outline-none hover:bg-yellow-600 rounded text-lg">
-      View All Projects
-    </button>
+    {/* <Link to="/viewprojects">
+  <button className="flex mx-auto mt-16 text-white bg-yellow-500 border-0 py-2 px-8 focus:outline-none hover:bg-yellow-600 rounded text-lg">
+    View All Projects
+  </button>
+</Link> */}
+
   </div>
 </section>
 
@@ -606,21 +605,22 @@ const Dashboard2 = () => {
 
     {/* Text Content */}
     <div className="flex w-full flex-col justify-between p-6 sm:w-1/2 lg:w-2/5 lg:p-10">
-      <h2 className="text-2xl font-extrabold text-white md:text-3xl lg:text-4xl leading-tight">
-        Ongoing<br />Project
-      </h2>
+        <h2 className="text-2xl font-extrabold text-white md:text-3xl lg:text-4xl leading-tight">
+            Convert<br />Project to Text
+        </h2>
 
-      <p className="mt-4 mb-6 text-sm text-gray-300 md:text-base lg:text-lg">
-        The current project at Synchrony focuses on building a unified developer productivity dashboard. It integrates GitHub activities, deployment pipelines, and collaboration metrics to provide real-time insights that help teams work smarter and deliver faster.
-      </p>
+        <p className="mt-4 mb-6 text-sm text-gray-300 md:text-base lg:text-lg">
+            Upload a ZIP file of your project and we’ll generate a detailed summary including folder structure, languages used, dependencies, and setup instructions—helping teams get up to speed faster.
+        </p>
 
-      <a
-        href="#"
-        className="inline-block w-max rounded-md bg-white px-6 py-2.5 text-sm font-semibold text-gray-800 transition duration-200 hover:bg-gray-100 focus:outline-none focus-visible:ring focus-visible:ring-yellow-300 active:bg-gray-200 md:text-base"
-      >
-        View Code
-      </a>
+        <a
+            href="/uploadproject"
+            className="inline-block w-max rounded-md bg-white px-6 py-2.5 text-sm font-semibold text-gray-800 transition duration-200 hover:bg-gray-100 focus:outline-none focus-visible:ring focus-visible:ring-yellow-300 active:bg-gray-200 md:text-base"
+        >
+            Upload & Convert
+        </a>
     </div>
+
 
     {/* Image Section */}
     <div className="order-first h-56 w-full sm:order-none sm:h-auto sm:w-1/2 lg:w-3/5">

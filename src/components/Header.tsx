@@ -22,11 +22,6 @@ const Header: React.FC = () => {
 
       {/* Profile & Logout */}
       <div className="flex items-center space-x-4">
-        <img
-          src="/profile.png"
-          alt="Profile"
-          className="h-10 w-10 rounded-full border border-gray-300 object-cover"
-        />
         <button
           onClick={() => navigate('/settings')}
           className="inline-block rounded-lg px-4 py-3 text-center text-sm font-semibold text-black outline-none ring-yellow-300 transition duration-100 hover:text-yellow-500 focus-visible:ring active:text-yellow-600 md:text-base"

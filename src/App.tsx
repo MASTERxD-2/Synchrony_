@@ -14,6 +14,8 @@ import SettingsPage from "./pages/Settings";
 import EnhancedChatbot from "./components/EnhancedChatbot";
 import { ChatbotProvider } from "./contexts/ChatbotContext";
 import MyTasksPage from "./pages/MyTasksPage";
+import UploadProject from "./pages/UploadProject";
+import ViewProjects from "./pages/ViewProjects";
 
 const queryClient = new QueryClient();
 
@@ -25,7 +27,7 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <Routes>
-            <Route path="/" element={<LoginPage />} />
+            <Route path="/" element={<Index />} />
             <Route path="/onboarding" element={<OnboardingPage />} />
             <Route path="/admin" element={<AdminPanel />} />
             <Route path="/login" element={<LoginPage />} />
@@ -33,6 +35,9 @@ const App = () => (
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/mytasks" element={<MyTasksPage />} />
+            <Route path="/uploadproject" element={<UploadProject />} />
+            <Route path="/viewprojects" element={<ViewProjects />} />
+
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
