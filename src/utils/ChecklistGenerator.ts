@@ -2,273 +2,84 @@
 import { User, OnboardingChecklist, ChecklistItem } from "@/types/User";
 
 export class ChecklistGenerator {
-  private commonTasks: Omit<ChecklistItem, 'id' | 'completed'>[] = [
+  // Day 1: Welcome & Introduction checklist items
+  private day1Tasks: Omit<ChecklistItem, 'id' | 'completed'>[] = [
     {
-      title: "Complete HR Paperwork",
-      description: "Fill out all required employment documents and tax forms",
+      title: "Attend orientation session",
+      description: "Complete the company orientation and welcome session",
       category: "Administrative",
-      priority: "high",
-      estimatedTime: 45,
-      dueDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(),
-    },
-    {
-      title: "Attend Welcome Meeting",
-      description: "Meet with your manager and team members",
-      category: "Meetings",
       priority: "high",
       estimatedTime: 60,
       dueDate: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000).toISOString(),
     },
     {
-      title: "Set Up Email and Accounts",
-      description: "Configure your email, Slack, and other company accounts",
+      title: "Meet team members and manager",
+      description: "Introduction meeting with your direct team and manager",
+      category: "Meetings",
+      priority: "high",
+      estimatedTime: 45,
+      dueDate: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000).toISOString(),
+    },
+    {
+      title: "Company mission, vision, and values walkthrough",
+      description: "Learn about company culture, mission, vision, and core values",
+      category: "Learning",
+      priority: "high",
+      estimatedTime: 30,
+    },
+    {
+      title: "Introduction to buddy/mentor (if applicable)",
+      description: "Meet your assigned buddy or mentor for guidance and support",
+      category: "Mentorship",
+      priority: "medium",
+      estimatedTime: 30,
+    },
+    {
+      title: "HR and admin onboarding session",
+      description: "Complete HR paperwork, policies, and administrative setup",
+      category: "Administrative",
+      priority: "high",
+      estimatedTime: 45,
+    },
+    {
+      title: "Access to communication tools (Slack, Teams, Zoom, etc.)",
+      description: "Set up and configure communication platforms",
+      category: "Setup",
+      priority: "high",
+      estimatedTime: 20,
+    },
+    {
+      title: "Access to internal portals (HRMS, intranet, ticketing system)",
+      description: "Get access to internal company systems and portals",
       category: "Setup",
       priority: "high",
       estimatedTime: 30,
     },
     {
-      title: "Read Company Handbook",
-      description: "Review company policies, culture, and guidelines",
-      category: "Learning",
+      title: "Development tools set up (GitHub, Jira, IDEs)",
+      description: "Configure development environment and tools",
+      category: "Setup",
       priority: "medium",
-      estimatedTime: 90,
+      estimatedTime: 60,
     },
     {
-      title: "Complete Safety Training",
-      description: "Watch safety videos and complete required certifications",
-      category: "Training",
-      priority: "high",
-      estimatedTime: 60,
+      title: "Access to project management tools",
+      description: "Set up access to project tracking and management systems",
+      category: "Setup",
+      priority: "medium",
+      estimatedTime: 15,
+    },
+    {
+      title: "Tech stack overview (if technical role)",
+      description: "Introduction to technologies and frameworks used",
+      category: "Learning",
+      priority: "medium",
+      estimatedTime: 45,
     },
   ];
 
-  private roleTasks: Record<string, Omit<ChecklistItem, 'id' | 'completed'>[]> = {
-    intern: [
-      {
-        title: "Meet Your Mentor",
-        description: "Schedule a meeting with your assigned mentor",
-        category: "Mentorship",
-        priority: "high",
-        estimatedTime: 30,
-      },
-      {
-        title: "Set Learning Goals",
-        description: "Define what you want to learn during your internship",
-        category: "Planning",
-        priority: "medium",
-        estimatedTime: 45,
-      },
-      {
-        title: "Join Intern Slack Channel",
-        description: "Connect with other interns and get support",
-        category: "Social",
-        priority: "medium",
-        estimatedTime: 15,
-      },
-    ],
-    worker: [
-      {
-        title: "Set Up Development Environment",
-        description: "Install necessary software and configure your workspace",
-        category: "Setup",
-        priority: "high",
-        estimatedTime: 120,
-      },
-      {
-        title: "Review Team Processes",
-        description: "Learn about team workflows, tools, and methodologies",
-        category: "Learning",
-        priority: "high",
-        estimatedTime: 60,
-      },
-      {
-        title: "Schedule 1-on-1s",
-        description: "Set up regular meetings with your manager and key stakeholders",
-        category: "Planning",
-        priority: "medium",
-        estimatedTime: 30,
-      },
-    ],
-  };
-
-  private departmentTasks: Record<string, Omit<ChecklistItem, 'id' | 'completed'>[]> = {
-    engineering: [
-      {
-        title: "Set Up Development Tools",
-        description: "Install IDE, Git, Docker, and other development tools",
-        category: "Setup",
-        priority: "high",
-        estimatedTime: 90,
-      },
-      {
-        title: "Clone Code Repositories",
-        description: "Get access to and clone relevant code repositories",
-        category: "Setup",
-        priority: "high",
-        estimatedTime: 30,
-      },
-      {
-        title: "Review Architecture Docs",
-        description: "Understand the system architecture and tech stack",
-        category: "Learning",
-        priority: "medium",
-        estimatedTime: 120,
-      },
-    ],
-    marketing: [
-      {
-        title: "Access Marketing Tools",
-        description: "Get set up with HubSpot, Google Analytics, and social media tools",
-        category: "Setup",
-        priority: "high",
-        estimatedTime: 45,
-      },
-      {
-        title: "Review Brand Guidelines",
-        description: "Understand brand voice, visual identity, and messaging",
-        category: "Learning",
-        priority: "high",
-        estimatedTime: 60,
-      },
-      {
-        title: "Meet Content Team",
-        description: "Connect with writers, designers, and content strategists",
-        category: "Meetings",
-        priority: "medium",
-        estimatedTime: 45,
-      },
-    ],
-    sales: [
-      {
-        title: "Set Up CRM Access",
-        description: "Get configured with Salesforce or other CRM tools",
-        category: "Setup",
-        priority: "high",
-        estimatedTime: 30,
-      },
-      {
-        title: "Product Training",
-        description: "Learn about our products, features, and pricing",
-        category: "Training",
-        priority: "high",
-        estimatedTime: 180,
-      },
-      {
-        title: "Shadow Sales Calls",
-        description: "Observe experienced reps on customer calls",
-        category: "Learning",
-        priority: "medium",
-        estimatedTime: 120,
-      },
-    ],
-    hr: [
-      {
-        title: "HRIS System Training",
-        description: "Learn to use our Human Resources Information System",
-        category: "Training",
-        priority: "high",
-        estimatedTime: 90,
-      },
-      {
-        title: "Employment Law Review",
-        description: "Review current employment laws and compliance requirements",
-        category: "Learning",
-        priority: "high",
-        estimatedTime: 120,
-      },
-      {
-        title: "Meet Department Heads",
-        description: "Introduction meetings with leaders from each department",
-        category: "Meetings",
-        priority: "medium",
-        estimatedTime: 90,
-      },
-    ],
-    design: [
-      {
-        title: "Access Design Tools",
-        description: "Set up Figma, Adobe Creative Suite, and other design tools",
-        category: "Setup",
-        priority: "high",
-        estimatedTime: 60,
-      },
-      {
-        title: "Review Design System",
-        description: "Study the company's design system and component library",
-        category: "Learning",
-        priority: "high",
-        estimatedTime: 90,
-      },
-      {
-        title: "Portfolio Review Session",
-        description: "Share your work and get feedback from the design team",
-        category: "Meetings",
-        priority: "medium",
-        estimatedTime: 60,
-      },
-    ],
-  };
-
-  private levelTasks: Record<string, Omit<ChecklistItem, 'id' | 'completed'>[]> = {
-    junior: [
-      {
-        title: "Find a Buddy",
-        description: "Connect with a peer who can help you navigate the company",
-        category: "Social",
-        priority: "medium",
-        estimatedTime: 30,
-      },
-      {
-        title: "Join Learning Groups",
-        description: "Participate in study groups or skill-building sessions",
-        category: "Learning",
-        priority: "medium",
-        estimatedTime: 60,
-      },
-    ],
-    mid: [
-      {
-        title: "Review Leadership Resources",
-        description: "Explore opportunities for leadership development",
-        category: "Learning",
-        priority: "low",
-        estimatedTime: 45,
-      },
-      {
-        title: "Connect with Cross-functional Teams",
-        description: "Build relationships outside your immediate team",
-        category: "Social",
-        priority: "medium",
-        estimatedTime: 60,
-      },
-    ],
-    senior: [
-      {
-        title: "Mentorship Opportunities",
-        description: "Explore ways to mentor junior team members",
-        category: "Mentorship",
-        priority: "medium",
-        estimatedTime: 45,
-      },
-      {
-        title: "Strategic Planning Session",
-        description: "Contribute to team or department strategic planning",
-        category: "Planning",
-        priority: "medium",
-        estimatedTime: 90,
-      },
-    ],
-  };
-
   generateChecklist(user: User): OnboardingChecklist {
-    const allTasks: Omit<ChecklistItem, 'id' | 'completed'>[] = [
-      ...this.commonTasks,
-      ...(this.roleTasks[user.role] || []),
-      ...(this.departmentTasks[user.department] || []),
-      ...(this.levelTasks[user.level] || []),
-    ];
-
-    const items: ChecklistItem[] = allTasks.map((task, index) => ({
+    const items: ChecklistItem[] = this.day1Tasks.map((task, index) => ({
       ...task,
       id: `${user.id}_task_${index}`,
       completed: false,

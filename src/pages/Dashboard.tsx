@@ -10,6 +10,15 @@ import Sidebar from '@/components/Sidebar';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import ChatbotIntegrator from '@/components/ChatbotIntegrator';
+import OnboardingDashboard from '@/components/OnboardingDashboard';
+import { 
+  savePreboardingChecklist, 
+  loadPreboardingChecklist, 
+  PreboardingChecklistData,
+  saveOnboardingChecklist, 
+  loadOnboardingChecklist, 
+  OnboardingChecklistData 
+} from '@/lib/checklistHelpers';
 
 
 interface Task {
@@ -40,6 +49,11 @@ const mockUser: User = {
 };
 
 const Dashboard2 = () => {
+  // Scroll to top when component mounts
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
   const [taskList, setTaskList] = useState<ChecklistItem[]>([]);
   const [progress, setProgress] = useState(0);
   const [gistContent, setGistContent] = useState('');
@@ -50,6 +64,17 @@ const Dashboard2 = () => {
     loc:0,
   });
   const [generatedDocs, setGeneratedDocs] = useState('');
+  const [currentView, setCurrentView] = useState<'dashboard' | 'preboarding' | 'onboarding'>('dashboard');
+  const [preboardingChecklist, setPreboardingChecklist] = useState<PreboardingChecklistData>({
+    offerLetter: false,
+    backgroundVerification: false,
+    identityProof: false,
+    bankDetails: false,
+    emergencyContacts: false,
+    equipmentShipped: false,
+    welcomeEmail: false,
+  });
+  const [savingPreboarding, setSavingPreboarding] = useState(false);
 
   useEffect(() => {
     const generator = new ChecklistGenerator();
@@ -129,6 +154,245 @@ const Dashboard2 = () => {
     setTaskList(updated);
     calculateProgress(updated);
   };
+
+  const handlePreboardingCheckboxChange = async (itemName: keyof PreboardingChecklistData) => {
+    const newChecklistItems = {
+      ...preboardingChecklist,
+      [itemName]: !preboardingChecklist[itemName],
+    };
+    
+    setPreboardingChecklist(newChecklistItems);
+
+    // Save to database
+    try {
+      setSavingPreboarding(true);
+      await savePreboardingChecklist(mockUser.id, newChecklistItems);
+      localStorage.setItem(`preboard_checklist_${mockUser.id}`, JSON.stringify(newChecklistItems));
+    } catch (error) {
+      console.error('Error saving preboarding checklist:', error);
+      localStorage.setItem(`preboard_checklist_${mockUser.id}`, JSON.stringify(newChecklistItems));
+    } finally {
+      setSavingPreboarding(false);
+    }
+  };
+
+  const handlePreboardingSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    try {
+      setSavingPreboarding(true);
+      await savePreboardingChecklist(mockUser.id, preboardingChecklist);
+      localStorage.setItem(`preboard_checklist_${mockUser.id}`, JSON.stringify(preboardingChecklist));
+    } catch (error) {
+      console.error('Error saving preboarding checklist:', error);
+      localStorage.setItem(`preboard_checklist_${mockUser.id}`, JSON.stringify(preboardingChecklist));
+    } finally {
+      setSavingPreboarding(false);
+    }
+    
+    const completedItems = Object.values(preboardingChecklist).filter(Boolean).length;
+    const totalItems = Object.keys(preboardingChecklist).length;
+    
+    alert(`Checklist updated! ${completedItems}/${totalItems} items completed.`);
+  };
+
+  const getPreboardingCompletionPercentage = () => {
+    const completedItems = Object.values(preboardingChecklist).filter(Boolean).length;
+    const totalItems = Object.keys(preboardingChecklist).length;
+    return Math.round((completedItems / totalItems) * 100);
+  };
+
+  // Load preboarding data
+  useEffect(() => {
+    const loadPreboardingData = async () => {
+      try {
+        const savedChecklist = await loadPreboardingChecklist(mockUser.id);
+        if (savedChecklist) {
+          setPreboardingChecklist(savedChecklist);
+        } else {
+          const localData = localStorage.getItem(`preboard_checklist_${mockUser.id}`);
+          if (localData) {
+            setPreboardingChecklist(JSON.parse(localData));
+          }
+        }
+      } catch (error) {
+        console.error('Error loading preboarding checklist:', error);
+        const localData = localStorage.getItem(`preboard_checklist_${mockUser.id}`);
+        if (localData) {
+          setPreboardingChecklist(JSON.parse(localData));
+        }
+      }
+    };
+    loadPreboardingData();
+  }, []);
+
+  // Pre-boarding component
+  const PreboardingComponent = () => (
+    <div className="max-w-4xl mx-auto bg-white p-8 rounded-xl shadow-lg mt-8">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-3xl font-bold text-gray-800">Pre-Joining Checklist</h1>
+        <button
+          onClick={() => setCurrentView('dashboard')}
+          className="bg-gray-600 hover:bg-gray-700 text-white font-semibold px-4 py-2 rounded-md transition-colors duration-200"
+        >
+          Back to Dashboard
+        </button>
+      </div>
+      <p className="text-center text-gray-600 mb-8">Complete these items before your first day</p>
+
+      {/* Progress Bar */}
+      <div className="mb-8">
+        <div className="flex justify-between items-center mb-2">
+          <span className="text-sm font-medium text-gray-700">Progress</span>
+          <span className="text-sm font-medium text-gray-700">{getPreboardingCompletionPercentage()}% Complete</span>
+        </div>
+        <div className="w-full bg-gray-200 rounded-full h-2">
+          <div 
+            className="bg-yellow-600 h-2 rounded-full transition-all duration-300"
+            style={{ width: `${getPreboardingCompletionPercentage()}%` }}
+          ></div>
+        </div>
+      </div>
+
+      <form onSubmit={handlePreboardingSubmit} className="space-y-6">
+        <div className="space-y-4">
+          {/* Offer Letter */}
+          <div className="flex items-start space-x-3 p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
+            <input
+              type="checkbox"
+              id="offerLetter"
+              checked={preboardingChecklist.offerLetter}
+              onChange={() => handlePreboardingCheckboxChange('offerLetter')}
+              className="mt-1 h-4 w-4 text-yellow-600 focus:ring-yellow-500 border-gray-300 rounded"
+            />
+            <label htmlFor="offerLetter" className="flex-1">
+              <span className="font-medium text-gray-800">Offer letter signed and returned</span>
+              <p className="text-sm text-gray-600 mt-1">Sign and return your offer letter to confirm acceptance</p>
+            </label>
+          </div>
+
+          {/* Background Verification */}
+          <div className="flex items-start space-x-3 p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
+            <input
+              type="checkbox"
+              id="backgroundVerification"
+              checked={preboardingChecklist.backgroundVerification}
+              onChange={() => handlePreboardingCheckboxChange('backgroundVerification')}
+              className="mt-1 h-4 w-4 text-yellow-600 focus:ring-yellow-500 border-gray-300 rounded"
+            />
+            <label htmlFor="backgroundVerification" className="flex-1">
+              <span className="font-medium text-gray-800">Background verification initiated/completed</span>
+              <p className="text-sm text-gray-600 mt-1">Complete the background verification process</p>
+            </label>
+          </div>
+
+          {/* Identity Proof */}
+          <div className="flex items-start space-x-3 p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
+            <input
+              type="checkbox"
+              id="identityProof"
+              checked={preboardingChecklist.identityProof}
+              onChange={() => handlePreboardingCheckboxChange('identityProof')}
+              className="mt-1 h-4 w-4 text-yellow-600 focus:ring-yellow-500 border-gray-300 rounded"
+            />
+            <label htmlFor="identityProof" className="flex-1">
+              <span className="font-medium text-gray-800">Identity proof submitted (Aadhar, PAN, Passport, etc.)</span>
+              <p className="text-sm text-gray-600 mt-1">Submit valid government-issued identity documents</p>
+            </label>
+          </div>
+
+          {/* Bank Details */}
+          <div className="flex items-start space-x-3 p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
+            <input
+              type="checkbox"
+              id="bankDetails"
+              checked={preboardingChecklist.bankDetails}
+              onChange={() => handlePreboardingCheckboxChange('bankDetails')}
+              className="mt-1 h-4 w-4 text-yellow-600 focus:ring-yellow-500 border-gray-300 rounded"
+            />
+            <label htmlFor="bankDetails" className="flex-1">
+              <span className="font-medium text-gray-800">Bank account details submitted (for salary)</span>
+              <p className="text-sm text-gray-600 mt-1">Provide bank account information for salary processing</p>
+            </label>
+          </div>
+
+          {/* Emergency Contacts */}
+          <div className="flex items-start space-x-3 p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
+            <input
+              type="checkbox"
+              id="emergencyContacts"
+              checked={preboardingChecklist.emergencyContacts}
+              onChange={() => handlePreboardingCheckboxChange('emergencyContacts')}
+              className="mt-1 h-4 w-4 text-yellow-600 focus:ring-yellow-500 border-gray-300 rounded"
+            />
+            <label htmlFor="emergencyContacts" className="flex-1">
+              <span className="font-medium text-gray-800">Emergency contact details shared</span>
+              <p className="text-sm text-gray-600 mt-1">Provide emergency contact information for safety purposes</p>
+            </label>
+          </div>
+
+          {/* Equipment Shipped */}
+          <div className="flex items-start space-x-3 p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
+            <input
+              type="checkbox"
+              id="equipmentShipped"
+              checked={preboardingChecklist.equipmentShipped}
+              onChange={() => handlePreboardingCheckboxChange('equipmentShipped')}
+              className="mt-1 h-4 w-4 text-yellow-600 focus:ring-yellow-500 border-gray-300 rounded"
+            />
+            <label htmlFor="equipmentShipped" className="flex-1">
+              <span className="font-medium text-gray-800">Laptop or equipment shipped (if remote)</span>
+              <p className="text-sm text-gray-600 mt-1">Confirm receipt of work equipment for remote employees</p>
+            </label>
+          </div>
+
+          {/* Welcome Email */}
+          <div className="flex items-start space-x-3 p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
+            <input
+              type="checkbox"
+              id="welcomeEmail"
+              checked={preboardingChecklist.welcomeEmail}
+              onChange={() => handlePreboardingCheckboxChange('welcomeEmail')}
+              className="mt-1 h-4 w-4 text-yellow-600 focus:ring-yellow-500 border-gray-300 rounded"
+            />
+            <label htmlFor="welcomeEmail" className="flex-1">
+              <span className="font-medium text-gray-800">Welcome email sent with joining instructions</span>
+              <p className="text-sm text-gray-600 mt-1">Receive and review your welcome email with first-day instructions</p>
+            </label>
+          </div>
+        </div>
+
+        {/* Submit Button */}
+        <div className="text-center pt-6">
+          <button
+            type="submit"
+            disabled={savingPreboarding}
+            className="bg-yellow-600 hover:bg-yellow-700 disabled:bg-yellow-400 disabled:cursor-not-allowed text-white font-semibold px-8 py-3 rounded-md transition-colors duration-200 flex items-center mx-auto"
+          >
+            {savingPreboarding && (
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+            )}
+            {savingPreboarding ? 'Saving...' : 'Update Checklist'}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+
+  // Onboarding component with back button
+  const OnboardingComponent = () => (
+    <div className="mt-8">
+      <div className="flex justify-between items-center mb-6 max-w-4xl mx-auto">
+        <button
+          onClick={() => setCurrentView('dashboard')}
+          className="bg-gray-600 hover:bg-gray-700 text-white font-semibold px-4 py-2 rounded-md transition-colors duration-200"
+        >
+          Back to Dashboard
+        </button>
+      </div>
+      <OnboardingDashboard user={mockUser} />
+    </div>
+  );
   return (
     <ChatbotIntegrator user={mockUser} tasks={taskList}>
       <div className="min-h-screen bg-white">
@@ -137,10 +401,12 @@ const Dashboard2 = () => {
 
         {/* Sidebar */}
         <Sidebar />
-        <main className="pt-20 sm:ml-64 px-6">
-    {/* Your actual content goes here */}
-    
-      <section className="text-gray-600 body-font mt-10 ml-6">
+        
+        {/* Conditional Content Based on Current View */}
+        {currentView === 'dashboard' && (
+          <main className="pt-20 sm:ml-64 px-6">
+            {/* Dashboard Content */}
+            <section className="text-gray-600 body-font mt-10 ml-6">
   <div className="container px-5 py-24 mx-auto">
     <div className="flex flex-wrap w-full mb-20 flex-col items-center text-center">
       <h1 className="sm:text-3xl text-2xl font-medium title-font mb-2 text-gray-900">Welcome Back!</h1>
@@ -303,8 +569,8 @@ const Dashboard2 = () => {
 
     <div className="flex flex-col items-center justify-between gap-8 md:flex-row">
       <div className="flex h-12 w-64 divide-x overflow-hidden rounded-lg border">
-        <a href="/preboarding" className="flex w-1/2 items-center justify-center bg-yellow-300 text-black transition duration-100 hover:bg-yellow-100 active:bg-yellow">Pre-boarding</a>
-        <a href="/onboardingpage" className="flex w-1/2 items-center justify-center bg-yellow-300 text-black transition duration-100 hover:bg-yellow-100 active:bg-yellow">Onboarding</a>
+        <button onClick={() => setCurrentView('preboarding')} className="flex w-1/2 items-center justify-center bg-yellow-300 text-black transition duration-100 hover:bg-yellow-100 active:bg-yellow">Pre-boarding</button>
+        <button onClick={() => setCurrentView('onboarding')} className="flex w-1/2 items-center justify-center bg-yellow-300 text-black transition duration-100 hover:bg-yellow-100 active:bg-yellow">Onboarding</button>
       </div>
 
       <div className="flex items-center justify-center gap-4 lg:justify-start">
@@ -371,6 +637,21 @@ const Dashboard2 = () => {
 
         </div>
         </main>
+        )}
+
+        {/* Pre-boarding View */}
+        {currentView === 'preboarding' && (
+          <main className="pt-20 sm:ml-64 px-6">
+            <PreboardingComponent />
+          </main>
+        )}
+
+        {/* Onboarding View */}
+        {currentView === 'onboarding' && (
+          <main className="pt-20 sm:ml-64 px-6">
+            <OnboardingComponent />
+          </main>
+        )}
 
         {/* Footer */}
         <Footer />

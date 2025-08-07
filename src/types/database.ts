@@ -63,6 +63,50 @@ export interface Database {
           updated_at?: string
         }
       }
+      preboarding_checklists: {
+        Row: {
+          id: string
+          user_id: string
+          offer_letter: boolean
+          background_verification: boolean
+          identity_proof: boolean
+          bank_details: boolean
+          emergency_contacts: boolean
+          equipment_shipped: boolean
+          welcome_email: boolean
+          progress: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          offer_letter?: boolean
+          background_verification?: boolean
+          identity_proof?: boolean
+          bank_details?: boolean
+          emergency_contacts?: boolean
+          equipment_shipped?: boolean
+          welcome_email?: boolean
+          progress?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          offer_letter?: boolean
+          background_verification?: boolean
+          identity_proof?: boolean
+          bank_details?: boolean
+          emergency_contacts?: boolean
+          equipment_shipped?: boolean
+          welcome_email?: boolean
+          progress?: number
+          created_at?: string
+          updated_at?: string
+        }
+      }
       checklist_items: {
         Row: {
           id: string

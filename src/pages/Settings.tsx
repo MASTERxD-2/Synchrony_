@@ -15,6 +15,12 @@ import { User } from '@/types/User';
 const SettingsPage: React.FC = () => {
   const navigate = useNavigate();
   const { user: contextUser, supabaseUser } = useAuth();
+  
+  // Scroll to top when component mounts
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
   const [user, setUser] = useState<User | null>(contextUser);
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');

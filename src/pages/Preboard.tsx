@@ -1,32 +1,155 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
+import { AuthProvider } from '@/contexts/AuthContext';
+import { savePreboardingChecklist, loadPreboardingChecklist, PreboardingChecklistData } from '@/lib/checklistHelpers';
 
-const Preboarding = () => {
-  const [formData, setFormData] = useState({
-    username: '',
-    email: '',
-    taxForm: '',
-    healthDeclaration: '',
-    insuranceDetails: '',
-    agreed: false,
+const PreboardingContent = () => {
+  const { user, isAuthenticated } = useAuth();
+  
+  // Scroll to top when component mounts
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
+  const [checklistItems, setChecklistItems] = useState<PreboardingChecklistData>({
+    offerLetter: false,
+    backgroundVerification: false,
+    identityProof: false,
+    bankDetails: false,
+    emergencyContacts: false,
+    equipmentShipped: false,
+    welcomeEmail: false,
   });
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value, type, checked } = e.target as HTMLInputElement;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value,
-    }));
-  };
+  // Load checklist data when user is authenticated
+  useEffect(() => {
+    const loadChecklistData = async () => {
+      if (isAuthenticated && user) {
+        console.log('Loading checklist for authenticated user:', user.id);
+        try {
+          const savedChecklist = await loadPreboardingChecklist(user.id);
+          if (savedChecklist) {
+            console.log('Loaded checklist from database:', savedChecklist);
+            setChecklistItems(savedChecklist);
+          } else {
+            // Try localStorage fallback
+            const localData = localStorage.getItem(`preboard_checklist_${user.id}`);
+            if (localData) {
+              console.log('Loading from localStorage fallback');
+              const parsedData = JSON.parse(localData);
+              setChecklistItems(parsedData);
+              // Try to save to database for future use
+              try {
+                await savePreboardingChecklist(user.id, parsedData);
+                console.log('Migrated localStorage data to database');
+              } catch (saveError) {
+                console.error('Could not migrate localStorage data:', saveError);
+              }
+            } else {
+              console.log('No saved checklist found - using defaults');
+            }
+          }
+        } catch (error) {
+          console.error('Error loading preboarding checklist:', error);
+          // Fall back to localStorage if database fails
+          const localData = localStorage.getItem(`preboard_checklist_${user.id}`);
+          if (localData) {
+            console.log('Using localStorage fallback due to database error');
+            setChecklistItems(JSON.parse(localData));
+          }
+        }
+      } else {
+        // Load guest data from localStorage if not authenticated
+        const guestData = localStorage.getItem('preboard_checklist_guest');
+        if (guestData) {
+          console.log('Loading guest data from localStorage');
+          setChecklistItems(JSON.parse(guestData));
+        }
+      }
+      setLoading(false);
+    };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formData.agreed) {
-      alert('You must agree to the rules and regulations.');
-      return;
+    loadChecklistData();
+  }, [isAuthenticated, user]);
+
+  const handleCheckboxChange = async (itemName: keyof PreboardingChecklistData) => {
+    const newChecklistItems = {
+      ...checklistItems,
+      [itemName]: !checklistItems[itemName],
+    };
+    
+    console.log('Checkbox changed:', itemName, 'New value:', newChecklistItems[itemName]);
+    console.log('Full checklist state:', newChecklistItems);
+    
+    setChecklistItems(newChecklistItems);
+
+    // Save to database if user is authenticated
+    if (isAuthenticated && user) {
+      try {
+        setSaving(true);
+        console.log('Saving to database for user:', user.id);
+        const result = await savePreboardingChecklist(user.id, newChecklistItems);
+        console.log('Save result:', result);
+        
+        // Also save to localStorage as backup
+        localStorage.setItem(`preboard_checklist_${user.id}`, JSON.stringify(newChecklistItems));
+        console.log('Saved to localStorage as backup');
+      } catch (error) {
+        console.error('Error saving preboarding checklist:', error);
+        // Still save to localStorage as fallback
+        localStorage.setItem(`preboard_checklist_${user.id}`, JSON.stringify(newChecklistItems));
+        console.log('Saved to localStorage as fallback');
+      } finally {
+        setSaving(false);
+      }
+    } else {
+      // Save to localStorage if not authenticated
+      localStorage.setItem('preboard_checklist_guest', JSON.stringify(newChecklistItems));
+      console.log('Saved guest data to localStorage');
     }
-    console.log('Preboarding Data:', formData);
-    alert('Form submitted successfully!');
   };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (isAuthenticated && user) {
+      try {
+        setSaving(true);
+        await savePreboardingChecklist(user.id, checklistItems);
+        localStorage.setItem(`preboard_checklist_${user.id}`, JSON.stringify(checklistItems));
+      } catch (error) {
+        console.error('Error saving preboarding checklist:', error);
+        localStorage.setItem(`preboard_checklist_${user.id}`, JSON.stringify(checklistItems));
+      } finally {
+        setSaving(false);
+      }
+    }
+    
+    const completedItems = Object.values(checklistItems).filter(Boolean).length;
+    const totalItems = Object.keys(checklistItems).length;
+    
+    console.log('Pre-joining Checklist:', checklistItems);
+    alert(`Checklist updated! ${completedItems}/${totalItems} items completed.`);
+  };
+
+  const getCompletionPercentage = () => {
+    const completedItems = Object.values(checklistItems).filter(Boolean).length;
+    const totalItems = Object.keys(checklistItems).length;
+    return Math.round((completedItems / totalItems) * 100);
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-purple-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading your checklist...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-blue-50 via-white to-purple-50">
@@ -43,113 +166,143 @@ const Preboarding = () => {
       {/* Main Content */}
       <main className="flex-grow py-8 px-4">
         <div className="max-w-4xl mx-auto bg-white p-8 rounded-xl shadow-lg">
-          <h1 className="text-3xl font-bold mb-6 text-center text-gray-800">Preboarding Form</h1>
+          <h1 className="text-3xl font-bold mb-6 text-center text-gray-800">Pre-Joining Checklist</h1>
+          <p className="text-center text-gray-600 mb-8">Complete these items before your first day</p>
+
+          {/* Progress Bar */}
+          <div className="mb-8">
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-sm font-medium text-gray-700">Progress</span>
+              <span className="text-sm font-medium text-gray-700">{getCompletionPercentage()}% Complete</span>
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-2">
+              <div 
+                className="bg-yellow-600 h-2 rounded-full transition-all duration-300"
+                style={{ width: `${getCompletionPercentage()}%` }}
+              ></div>
+            </div>
+          </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Username */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Username</label>
-              <input
-                type="text"
-                name="username"
-                value={formData.username}
-                onChange={handleChange}
-                required
-                className="w-full rounded-md border border-gray-300 px-3 py-2"
-                placeholder="Enter your username"
-              />
-            </div>
+            {/* Checklist Items */}
+            <div className="space-y-4">
+              {/* Offer Letter */}
+              <div className="flex items-start space-x-3 p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
+                <input
+                  type="checkbox"
+                  id="offerLetter"
+                  checked={checklistItems.offerLetter}
+                  onChange={() => handleCheckboxChange('offerLetter')}
+                  className="mt-1 h-4 w-4 text-yellow-600 focus:ring-yellow-500 border-gray-300 rounded"
+                />
+                <label htmlFor="offerLetter" className="flex-1">
+                  <span className="font-medium text-gray-800">Offer letter signed and returned</span>
+                  <p className="text-sm text-gray-600 mt-1">Sign and return your offer letter to confirm acceptance</p>
+                </label>
+              </div>
 
-            {/* Email */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-              <input
-                type="email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                required
-                className="w-full rounded-md border border-gray-300 px-3 py-2"
-                placeholder="Enter your email"
-              />
-            </div>
+              {/* Background Verification */}
+              <div className="flex items-start space-x-3 p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
+                <input
+                  type="checkbox"
+                  id="backgroundVerification"
+                  checked={checklistItems.backgroundVerification}
+                  onChange={() => handleCheckboxChange('backgroundVerification')}
+                  className="mt-1 h-4 w-4 text-yellow-600 focus:ring-yellow-500 border-gray-300 rounded"
+                />
+                <label htmlFor="backgroundVerification" className="flex-1">
+                  <span className="font-medium text-gray-800">Background verification initiated/completed</span>
+                  <p className="text-sm text-gray-600 mt-1">Complete the background verification process</p>
+                </label>
+              </div>
 
-            {/* Tax Form */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Tax Form Information</label>
-              <textarea
-                name="taxForm"
-                value={formData.taxForm}
-                onChange={handleChange}
-                required
-                rows={3}
-                className="w-full rounded-md border border-gray-300 px-3 py-2"
-                placeholder="Enter tax form details"
-              />
-            </div>
+              {/* Identity Proof */}
+              <div className="flex items-start space-x-3 p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
+                <input
+                  type="checkbox"
+                  id="identityProof"
+                  checked={checklistItems.identityProof}
+                  onChange={() => handleCheckboxChange('identityProof')}
+                  className="mt-1 h-4 w-4 text-yellow-600 focus:ring-yellow-500 border-gray-300 rounded"
+                />
+                <label htmlFor="identityProof" className="flex-1">
+                  <span className="font-medium text-gray-800">Identity proof submitted (Aadhar, PAN, Passport, etc.)</span>
+                  <p className="text-sm text-gray-600 mt-1">Submit valid government-issued identity documents</p>
+                </label>
+              </div>
 
-            {/* Health Declaration */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Health Declaration</label>
-              <textarea
-                name="healthDeclaration"
-                value={formData.healthDeclaration}
-                onChange={handleChange}
-                required
-                rows={3}
-                className="w-full rounded-md border border-gray-300 px-3 py-2"
-                placeholder="Enter any health-related declarations"
-              />
-            </div>
+              {/* Bank Details */}
+              <div className="flex items-start space-x-3 p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
+                <input
+                  type="checkbox"
+                  id="bankDetails"
+                  checked={checklistItems.bankDetails}
+                  onChange={() => handleCheckboxChange('bankDetails')}
+                  className="mt-1 h-4 w-4 text-yellow-600 focus:ring-yellow-500 border-gray-300 rounded"
+                />
+                <label htmlFor="bankDetails" className="flex-1">
+                  <span className="font-medium text-gray-800">Bank account details submitted (for salary)</span>
+                  <p className="text-sm text-gray-600 mt-1">Provide bank account information for salary processing</p>
+                </label>
+              </div>
 
-            {/* Insurance Details */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Insurance Paperwork</label>
-              <textarea
-                name="insuranceDetails"
-                value={formData.insuranceDetails}
-                onChange={handleChange}
-                required
-                rows={3}
-                className="w-full rounded-md border border-gray-300 px-3 py-2"
-                placeholder="Enter insurance details"
-              />
-            </div>
+              {/* Emergency Contacts */}
+              <div className="flex items-start space-x-3 p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
+                <input
+                  type="checkbox"
+                  id="emergencyContacts"
+                  checked={checklistItems.emergencyContacts}
+                  onChange={() => handleCheckboxChange('emergencyContacts')}
+                  className="mt-1 h-4 w-4 text-yellow-600 focus:ring-yellow-500 border-gray-300 rounded"
+                />
+                <label htmlFor="emergencyContacts" className="flex-1">
+                  <span className="font-medium text-gray-800">Emergency contact details shared</span>
+                  <p className="text-sm text-gray-600 mt-1">Provide emergency contact information for safety purposes</p>
+                </label>
+              </div>
 
-            {/* Rules & Regulations */}
-            <div className="border-t pt-6">
-              <h2 className="text-xl font-semibold mb-2">Synchrony - Rules and Regulations</h2>
-              <ul className="list-disc list-inside text-gray-700 text-sm space-y-1">
-                <li>Employees must adhere to the company code of conduct at all times.</li>
-                <li>Working hours are from 9:00 AM to 6:00 PM, Monday to Friday.</li>
-                <li>Leaves must be applied at least 2 days in advance and approved by your manager.</li>
-                <li>All company data is confidential and must not be shared without authorization.</li>
-                <li>Company systems should be used for official purposes only.</li>
-                <li>Violation of rules may result in disciplinary action, including termination.</li>
-              </ul>
-            </div>
+              {/* Equipment Shipped */}
+              <div className="flex items-start space-x-3 p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
+                <input
+                  type="checkbox"
+                  id="equipmentShipped"
+                  checked={checklistItems.equipmentShipped}
+                  onChange={() => handleCheckboxChange('equipmentShipped')}
+                  className="mt-1 h-4 w-4 text-yellow-600 focus:ring-yellow-500 border-gray-300 rounded"
+                />
+                <label htmlFor="equipmentShipped" className="flex-1">
+                  <span className="font-medium text-gray-800">Laptop or equipment shipped (if remote)</span>
+                  <p className="text-sm text-gray-600 mt-1">Confirm receipt of work equipment for remote employees</p>
+                </label>
+              </div>
 
-            {/* Agreement Checkbox */}
-            <div className="flex items-center">
-              <input
-                type="checkbox"
-                name="agreed"
-                checked={formData.agreed}
-                onChange={handleChange}
-                className="mr-2"
-              />
-              <label htmlFor="agreed" className="text-sm text-gray-700">
-                I agree to the above rules and regulations
-              </label>
+              {/* Welcome Email */}
+              <div className="flex items-start space-x-3 p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
+                <input
+                  type="checkbox"
+                  id="welcomeEmail"
+                  checked={checklistItems.welcomeEmail}
+                  onChange={() => handleCheckboxChange('welcomeEmail')}
+                  className="mt-1 h-4 w-4 text-yellow-600 focus:ring-yellow-500 border-gray-300 rounded"
+                />
+                <label htmlFor="welcomeEmail" className="flex-1">
+                  <span className="font-medium text-gray-800">Welcome email sent with joining instructions</span>
+                  <p className="text-sm text-gray-600 mt-1">Receive and review your welcome email with first-day instructions</p>
+                </label>
+              </div>
             </div>
 
             {/* Submit Button */}
-            <div className="text-center">
+            <div className="text-center pt-6">
               <button
                 type="submit"
-                className="bg-yellow-600 hover:bg-yellow-700 text-white font-semibold px-6 py-2 rounded-md"
+                disabled={saving}
+                className="bg-yellow-600 hover:bg-yellow-700 disabled:bg-yellow-400 disabled:cursor-not-allowed text-white font-semibold px-8 py-3 rounded-md transition-colors duration-200 flex items-center mx-auto"
               >
-                Submit Preboarding
+                {saving && (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                )}
+                {saving ? 'Saving...' : 'Update Checklist'}
               </button>
             </div>
           </form>
@@ -169,6 +322,14 @@ const Preboarding = () => {
         </div>
       </footer>
     </div>
+  );
+};
+
+const Preboarding: React.FC = () => {
+  return (
+    <AuthProvider>
+      <PreboardingContent />
+    </AuthProvider>
   );
 };
 

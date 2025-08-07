@@ -1,43 +1,197 @@
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Clock, User, Building, Trophy, LogOut } from 'lucide-react';
 import { User as UserType, OnboardingChecklist } from '@/types/User';
 import { ChecklistGenerator } from '@/utils/ChecklistGenerator';
-import { useNavigate } from 'react-router-dom';
+import { 
+  saveOnboardingChecklist, 
+  loadOnboardingChecklist, 
+  OnboardingChecklistData, 
+  OnboardingTaskData,
+  generateUUID 
+} from '@/lib/checklistHelpers';
 
 interface OnboardingDashboardProps {
   user: UserType;
 }
 
 const OnboardingDashboard: React.FC<OnboardingDashboardProps> = ({ user }) => {
-  const navigate = useNavigate();
-
-  const logout = () => {
-    console.log('Logging out');
-    localStorage.removeItem('token'); // optional
-    navigate('/');
-  };
-
-  const [checklist, setChecklist] = useState<OnboardingChecklist | null>(null);
+  const [checklist, setChecklist] = useState<OnboardingChecklistData | null>(null);
   const [generator] = useState(new ChecklistGenerator());
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  // Scroll to top when component mounts
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
 
   useEffect(() => {
-    const savedChecklist = localStorage.getItem(`checklist_${user.id}`);
-    if (savedChecklist) {
-      setChecklist(JSON.parse(savedChecklist));
-    } else {
-      const newChecklist = generator.generateChecklist(user);
-      setChecklist(newChecklist);
-      localStorage.setItem(`checklist_${user.id}`, JSON.stringify(newChecklist));
-    }
+    const loadChecklistData = async () => {
+      console.log('🔄 Loading checklist data for user:', user.id);
+      console.log('👤 User object:', user);
+      
+      try {
+        // Try to load from database first
+        console.log('📋 Attempting to load from database...');
+        const savedChecklist = await loadOnboardingChecklist(user.id);
+        
+        if (savedChecklist) {
+          console.log('✅ Found saved checklist in database:', savedChecklist);
+          setChecklist(savedChecklist);
+        } else {
+          console.log('❌ No checklist found in database, checking localStorage...');
+          
+          // Try multiple localStorage keys as fallback (in case user ID changed)
+          const possibleKeys = [
+            `checklist_${user.id}`,
+            `checklist_${user.email}`, // Fallback to email-based key
+            'checklist_current_user' // Generic fallback
+          ];
+          
+          let localData = null;
+          let usedKey = null;
+          
+          for (const key of possibleKeys) {
+            console.log('🔑 Checking localStorage key:', key);
+            localData = localStorage.getItem(key);
+            if (localData) {
+              usedKey = key;
+              console.log('📦 Found data with key:', key);
+              break;
+            }
+          }
+          
+          if (localData) {
+            console.log('📦 Found data in localStorage, migrating...');
+            // Migrate from localStorage format to new format
+            const oldChecklist: OnboardingChecklist = JSON.parse(localData);
+            const newChecklistData: OnboardingChecklistData = {
+              id: generateUUID(),
+              items: oldChecklist.items.map(item => ({
+                id: item.id,
+                title: item.title,
+                description: item.description,
+                category: item.category,
+                priority: item.priority,
+                estimatedTime: item.estimatedTime,
+                completed: item.completed,
+                dueDate: item.dueDate,
+              })),
+              progress: oldChecklist.progress,
+              createdAt: oldChecklist.createdAt,
+              updatedAt: oldChecklist.updatedAt,
+            };
+            
+            setChecklist(newChecklistData);
+            
+            // Save migrated data to database
+            try {
+              await saveOnboardingChecklist(user.id, newChecklistData);
+              // Remove old localStorage data after successful migration
+              if (usedKey) {
+                localStorage.removeItem(usedKey);
+                console.log('🗑️ Removed old localStorage data:', usedKey);
+              }
+            } catch (error) {
+              console.error('Error migrating checklist to database:', error);
+            }
+          } else {
+            console.log('🆕 No existing data found, generating new checklist...');
+            // Generate new checklist
+            const newOnboardingChecklist = generator.generateChecklist(user);
+            const newChecklistData: OnboardingChecklistData = {
+              id: generateUUID(),
+              items: newOnboardingChecklist.items.map(item => ({
+                id: item.id,
+                title: item.title,
+                description: item.description,
+                category: item.category,
+                priority: item.priority,
+                estimatedTime: item.estimatedTime,
+                completed: item.completed,
+                dueDate: item.dueDate,
+              })),
+              progress: newOnboardingChecklist.progress,
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+            };
+            
+            setChecklist(newChecklistData);
+            
+            // Save new checklist to database
+            try {
+              console.log('💾 Saving new checklist to database...');
+              await saveOnboardingChecklist(user.id, newChecklistData);
+              console.log('✅ Successfully saved new checklist to database');
+            } catch (error) {
+              console.error('Error saving new checklist to database:', error);
+              // Fallback to localStorage
+              const fallbackKey = `checklist_${user.id}`;
+              localStorage.setItem(fallbackKey, JSON.stringify(newOnboardingChecklist));
+            }
+          }
+        }
+      } catch (error) {
+        console.error('❌ Error loading checklist from database:', error);
+        console.log('🔄 Falling back to localStorage...');
+        
+        // Fallback to localStorage if database fails
+        const fallbackKey = `checklist_${user.id}`;
+        const savedChecklist = localStorage.getItem(fallbackKey);
+        if (savedChecklist) {
+          console.log('📦 Found fallback data in localStorage');
+          const oldChecklist: OnboardingChecklist = JSON.parse(savedChecklist);
+          const fallbackData: OnboardingChecklistData = {
+            id: generateUUID(),
+            items: oldChecklist.items.map(item => ({
+              id: item.id,
+              title: item.title,
+              description: item.description,
+              category: item.category,
+              priority: item.priority,
+              estimatedTime: item.estimatedTime,
+              completed: item.completed,
+              dueDate: item.dueDate,
+            })),
+            progress: oldChecklist.progress,
+            createdAt: oldChecklist.createdAt,
+            updatedAt: oldChecklist.updatedAt,
+          };
+          setChecklist(fallbackData);
+        } else {
+          // Last resort: generate new checklist
+          const newChecklist = generator.generateChecklist(user);
+          const lastResortData: OnboardingChecklistData = {
+            id: generateUUID(),
+            items: newChecklist.items.map(item => ({
+              id: item.id,
+              title: item.title,
+              description: item.description,
+              category: item.category,
+              priority: item.priority,
+              estimatedTime: item.estimatedTime,
+              completed: item.completed,
+              dueDate: item.dueDate,
+            })),
+            progress: newChecklist.progress,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          };
+          setChecklist(lastResortData);
+          const lastResortKey = `checklist_${user.id}`;
+          localStorage.setItem(lastResortKey, JSON.stringify(newChecklist));
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadChecklistData();
   }, [user, generator]);
 
-  const handleTaskToggle = (taskId: string) => {
+  const handleTaskToggle = async (taskId: string) => {
     if (!checklist) return;
+
+    console.log('🔄 Toggling task:', taskId, 'for user:', user.id);
 
     const updatedItems = checklist.items.map(item =>
       item.id === taskId ? { ...item, completed: !item.completed } : item
@@ -46,7 +200,7 @@ const OnboardingDashboard: React.FC<OnboardingDashboardProps> = ({ user }) => {
     const completedCount = updatedItems.filter(item => item.completed).length;
     const progress = Math.round((completedCount / updatedItems.length) * 100);
 
-    const updatedChecklist = {
+    const updatedChecklist: OnboardingChecklistData = {
       ...checklist,
       items: updatedItems,
       progress,
@@ -54,186 +208,148 @@ const OnboardingDashboard: React.FC<OnboardingDashboardProps> = ({ user }) => {
     };
 
     setChecklist(updatedChecklist);
-    localStorage.setItem(`checklist_${user.id}`, JSON.stringify(updatedChecklist));
-  };
 
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'high': return 'bg-red-100 text-red-800';
-      case 'medium': return 'bg-yellow-100 text-yellow-800';
-      case 'low': return 'bg-green-100 text-green-800';
-      default: return 'bg-gray-100 text-gray-800';
+    // Save to database
+    try {
+      setSaving(true);
+      console.log('💾 Auto-saving checklist to database for user:', user.id);
+      await saveOnboardingChecklist(user.id, updatedChecklist);
+      console.log('✅ Auto-save successful');
+      // Also save to localStorage as backup with multiple keys for reliability
+      const backupFormat: OnboardingChecklist = {
+        ...updatedChecklist,
+        userId: user.id,
+      };
+      localStorage.setItem(`checklist_${user.id}`, JSON.stringify(backupFormat));
+      localStorage.setItem(`checklist_${user.email}`, JSON.stringify(backupFormat)); // Extra backup
+      localStorage.setItem('checklist_current_user', JSON.stringify(backupFormat)); // Generic backup
+    } catch (error) {
+      console.error('❌ Auto-save failed:', error);
+      // Fallback to localStorage
+      const backupFormat: OnboardingChecklist = {
+        ...updatedChecklist,
+        userId: user.id,
+      };
+      localStorage.setItem(`checklist_${user.id}`, JSON.stringify(backupFormat));
+      localStorage.setItem(`checklist_${user.email}`, JSON.stringify(backupFormat)); // Extra backup
+    } finally {
+      setSaving(false);
     }
   };
 
-  const getCategoryIcon = (category: string) => {
-    switch (category) {
-      case 'Setup': return '⚙️';
-      case 'Learning': return '📚';
-      case 'Meetings': return '🤝';
-      case 'Training': return '🎓';
-      case 'Administrative': return '📋';
-      case 'Social': return '👥';
-      case 'Planning': return '📅';
-      case 'Mentorship': return '🌟';
-      default: return '📝';
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!checklist) return;
+
+    try {
+      setSaving(true);
+      console.log('💾 Manual save - saving checklist for user:', user.id);
+      console.log('📋 Checklist data being saved:', checklist);
+      await saveOnboardingChecklist(user.id, checklist);
+      
+      // Also save to localStorage as backup with multiple keys
+      const backupFormat: OnboardingChecklist = {
+        ...checklist,
+        userId: user.id,
+      };
+      localStorage.setItem(`checklist_${user.id}`, JSON.stringify(backupFormat));
+      localStorage.setItem(`checklist_${user.email}`, JSON.stringify(backupFormat)); // Extra backup
+      localStorage.setItem('checklist_current_user', JSON.stringify(backupFormat)); // Generic backup
+      
+      const completedItems = checklist.items.filter(item => item.completed).length;
+      const totalItems = checklist.items.length;
+      
+      console.log('✅ Manual save successful!', completedItems, 'of', totalItems, 'completed');
+      alert(`Checklist updated! ${completedItems}/${totalItems} items completed.`);
+    } catch (error) {
+      console.error('Error updating checklist:', error);
+      alert('Error updating checklist. Please try again.');
+    } finally {
+      setSaving(false);
     }
   };
+
+  const getCompletionPercentage = () => {
+    if (!checklist) return 0;
+    const completedItems = checklist.items.filter(item => item.completed).length;
+    const totalItems = checklist.items.length;
+    return Math.round((completedItems / totalItems) * 100);
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-purple-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading your onboarding checklist...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!checklist) {
     return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
   }
 
-  const completedTasks = checklist.items.filter(item => item.completed).length;
-  const totalTasks = checklist.items.length;
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-      <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="flex justify-between items-center mb-6">
-          <div className="flex items-center space-x-4">
-            <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold">
-              {user.name.charAt(0).toUpperCase()}
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-blue-50 via-white to-purple-50">
+      {/* Main Content */}
+      <main className="flex-grow py-8 px-4">
+        <div className="max-w-4xl mx-auto bg-white p-8 rounded-xl shadow-lg">
+          <h1 className="text-3xl font-bold mb-6 text-center text-gray-800">Day 1: Welcome & Introduction</h1>
+          <p className="text-center text-gray-600 mb-8">Complete these items on your first day</p>
+
+          {/* Progress Bar */}
+          <div className="mb-8">
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-sm font-medium text-gray-700">Progress</span>
+              <span className="text-sm font-medium text-gray-700">{getCompletionPercentage()}% Complete</span>
             </div>
-            <div>
-              <h1 className="text-2xl font-bold text-gray-800">Welcome, {user.name}!</h1>
-              <p className="text-gray-600">Your personalized onboarding checklist</p>
+            <div className="w-full bg-gray-200 rounded-full h-2">
+              <div 
+                className="bg-yellow-600 h-2 rounded-full transition-all duration-300"
+                style={{ width: `${getCompletionPercentage()}%` }}
+              ></div>
             </div>
           </div>
-          <Button
-            variant="outline"
-            onClick={logout}
-            className="flex items-center space-x-2"
-          >
-            <LogOut className="w-4 h-4" />
-            <span>Logout</span>
-          </Button>
-        </div>
 
-        {/* User Info Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <Card>
-            <CardContent className="p-4 flex items-center space-x-3">
-              <User className="w-8 h-8 text-blue-500" />
-              <div>
-                <p className="text-sm font-medium text-gray-600">Role</p>
-                <p className="text-lg font-semibold capitalize">{user.role}</p>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-4 flex items-center space-x-3">
-              <Building className="w-8 h-8 text-green-500" />
-              <div>
-                <p className="text-sm font-medium text-gray-600">Department</p>
-                <p className="text-lg font-semibold capitalize">{user.department}</p>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-4 flex items-center space-x-3">
-              <Trophy className="w-8 h-8 text-yellow-500" />
-              <div>
-                <p className="text-sm font-medium text-gray-600">Level</p>
-                <p className="text-lg font-semibold capitalize">{user.level}</p>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Progress Card */}
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              <span>Onboarding Progress</span>
-              <Badge variant="secondary" className="ml-2">
-                {completedTasks} / {totalTasks} completed
-              </Badge>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Checklist Items */}
             <div className="space-y-4">
-              <Progress value={checklist.progress} className="w-full h-3" />
-              <div className="flex justify-between text-sm text-gray-600">
-                <span>{checklist.progress}% Complete</span>
-                <span>{totalTasks - completedTasks} tasks remaining</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Checklist */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Your Onboarding Checklist</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {checklist.items.map((item) => (
-              <div
-                key={item.id}
-                className={`p-4 rounded-lg border transition-all duration-200 ${
-                  item.completed 
-                    ? 'bg-green-50 border-green-200' 
-                    : 'bg-white border-gray-200 hover:border-gray-300'
-                }`}
-              >
-                <div className="flex items-start space-x-3">
-                  <Checkbox
+              {checklist.items.map((item) => (
+                <div key={item.id} className="flex items-start space-x-3 p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
+                  <input
+                    type="checkbox"
                     id={item.id}
                     checked={item.completed}
-                    onCheckedChange={() => handleTaskToggle(item.id)}
-                    className="mt-1"
+                    onChange={() => handleTaskToggle(item.id)}
+                    className="mt-1 h-4 w-4 text-yellow-600 focus:ring-yellow-500 border-gray-300 rounded"
                   />
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-2 mb-2">
-                      <span className="text-lg">{getCategoryIcon(item.category)}</span>
-                      <h3 className={`font-semibold ${item.completed ? 'line-through text-gray-500' : ''}`}>
-                        {item.title}
-                      </h3>
-                      <Badge className={getPriorityColor(item.priority)}>
-                        {item.priority}
-                      </Badge>
-                    </div>
-                    <p className={`text-gray-600 mb-3 ${item.completed ? 'line-through' : ''}`}>
-                      {item.description}
-                    </p>
-                    <div className="flex items-center space-x-4 text-sm text-gray-500">
-                      <div className="flex items-center space-x-1">
-                        <Clock className="w-4 h-4" />
-                        <span>{item.estimatedTime} min</span>
-                      </div>
-                      <Badge variant="outline">{item.category}</Badge>
-                      {item.dueDate && (
-                        <span className="text-orange-600">
-                          Due: {new Date(item.dueDate).toLocaleDateString()}
-                        </span>
-                      )}
-                    </div>
-                  </div>
+                  <label htmlFor={item.id} className="flex-1">
+                    <span className="font-medium text-gray-800">{item.title}</span>
+                    <p className="text-sm text-gray-600 mt-1">{item.description}</p>
+                  </label>
                 </div>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
+              ))}
+            </div>
 
-        {/* Completion Message */}
-        {checklist.progress === 100 && (
-          <Card className="mt-6 bg-green-50 border-green-200">
-            <CardContent className="p-6 text-center">
-              <div className="text-6xl mb-4">🎉</div>
-              <h2 className="text-2xl font-bold text-green-800 mb-2">
-                Congratulations!
-              </h2>
-              <p className="text-green-700">
-                You've completed your onboarding checklist. Welcome to the team!
-              </p>
-            </CardContent>
-          </Card>
-        )}
-      </div>
+            {/* Submit Button */}
+            <div className="text-center pt-6">
+              <button
+                type="submit"
+                disabled={saving}
+                className="bg-yellow-600 hover:bg-yellow-700 disabled:bg-yellow-400 disabled:cursor-not-allowed text-white font-semibold px-8 py-3 rounded-md transition-colors duration-200 flex items-center mx-auto"
+              >
+                {saving && (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                )}
+                {saving ? 'Saving...' : 'Update Checklist'}
+              </button>
+            </div>
+          </form>
+        </div>
+      </main>
     </div>
   );
 };

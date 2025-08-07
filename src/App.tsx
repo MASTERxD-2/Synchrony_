@@ -10,8 +10,6 @@ import AdminPanel from "./components/AdminPanel";
 import LoginPage from "./pages/Login";
 import Preboarding from "./pages/Preboard";
 import Dashboard from "./pages/Dashboard";
-import Onboarding from "./pages/OnboardingPage";
-import RegistrationPage from "./pages/Registration";
 import SettingsPage from "./pages/Settings";
 import EnhancedChatbot from "./components/EnhancedChatbot";
 import { ChatbotProvider } from "./contexts/ChatbotContext";
@@ -26,14 +24,12 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <Routes>
-            <Route path="/" element={<Index />} />
+            <Route path="/" element={<LoginPage />} />
             <Route path="/onboarding" element={<OnboardingPage />} />
             <Route path="/admin" element={<AdminPanel />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/preboarding" element={<Preboarding />} />
             <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/onboardingpage" element={<Onboarding />} />
-            <Route path="/registration" element={<RegistrationPage />} />
             <Route path="/settings" element={<SettingsPage />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
