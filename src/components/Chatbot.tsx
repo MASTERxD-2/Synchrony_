@@ -212,7 +212,7 @@ const Chatbot: React.FC<ChatbotProps> = ({ userRole = 'intern', userDepartment =
     return (
       <Button
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-lg bg-blue-600 hover:bg-blue-700 transition-all duration-200 z-50"
+        className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-lg bg-yellow-600 hover:bg-yellow-700 transition-all duration-200 z-50"
         size="icon"
       >
         <MessageCircle className="h-6 w-6" />
@@ -222,10 +222,10 @@ const Chatbot: React.FC<ChatbotProps> = ({ userRole = 'intern', userDepartment =
 
   return (
     <Card className={`fixed ${isMinimized ? 'bottom-6 right-6 w-80 h-16' : 'bottom-6 right-6 w-96 h-[600px]'} shadow-2xl transition-all duration-300 z-50 flex flex-col`}>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-t-lg">
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3 bg-gradient-to-r from-yellow-600 to-yellow-700 text-white rounded-t-lg">
         <div className="flex items-center space-x-2">
           <Avatar className="h-8 w-8">
-            <AvatarFallback className="bg-blue-500">
+            <AvatarFallback className="bg-yellow-500">
               <Bot className="h-5 w-5" />
             </AvatarFallback>
           </Avatar>
@@ -236,7 +236,7 @@ const Chatbot: React.FC<ChatbotProps> = ({ userRole = 'intern', userDepartment =
             variant="ghost"
             size="icon"
             onClick={() => setIsMinimized(!isMinimized)}
-            className="h-8 w-8 text-white hover:bg-blue-600"
+            className="h-8 w-8 text-white hover:bg-yellow-600"
           >
             {isMinimized ? <Maximize2 className="h-4 w-4" /> : <Minimize2 className="h-4 w-4" />}
           </Button>
@@ -244,7 +244,7 @@ const Chatbot: React.FC<ChatbotProps> = ({ userRole = 'intern', userDepartment =
             variant="ghost"
             size="icon"
             onClick={() => setIsOpen(false)}
-            className="h-8 w-8 text-white hover:bg-blue-600"
+            className="h-8 w-8 text-white hover:bg-yellow-600"
           >
             <X className="h-4 w-4" />
           </Button>
@@ -259,13 +259,13 @@ const Chatbot: React.FC<ChatbotProps> = ({ userRole = 'intern', userDepartment =
                 <div key={message.id} className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
                   <div className={`flex items-start space-x-2 max-w-[80%] ${message.sender === 'user' ? 'flex-row-reverse space-x-reverse' : ''}`}>
                     <Avatar className="h-8 w-8 flex-shrink-0">
-                      <AvatarFallback className={message.sender === 'user' ? 'bg-gray-300' : 'bg-blue-100'}>
-                        {message.sender === 'user' ? <User className="h-4 w-4" /> : <Bot className="h-4 w-4 text-blue-600" />}
+                      <AvatarFallback className={message.sender === 'user' ? 'bg-gray-300' : 'bg-yellow-100'}>
+                        {message.sender === 'user' ? <User className="h-4 w-4" /> : <Bot className="h-4 w-4 text-yellow-600" />}
                       </AvatarFallback>
                     </Avatar>
                     <div className={`rounded-lg p-3 ${
                       message.sender === 'user' 
-                        ? 'bg-blue-600 text-white' 
+                        ? 'bg-yellow-600 text-white' 
                         : 'bg-gray-100 text-gray-900'
                     }`}>
                       <p className="text-sm whitespace-pre-wrap">{message.text}</p>
@@ -277,7 +277,7 @@ const Chatbot: React.FC<ChatbotProps> = ({ userRole = 'intern', userDepartment =
                               className="cursor-pointer"
                               onClick={() => handleSuggestionClick(suggestion)}
                             >
-                              <Badge variant="secondary" className="hover:bg-blue-200 text-xs">
+                              <Badge variant="secondary" className="hover:bg-yellow-200 text-xs">
                                 {suggestion}
                               </Badge>
                             </div>
@@ -292,8 +292,8 @@ const Chatbot: React.FC<ChatbotProps> = ({ userRole = 'intern', userDepartment =
                 <div className="flex justify-start">
                   <div className="flex items-start space-x-2">
                     <Avatar className="h-8 w-8">
-                      <AvatarFallback className="bg-blue-100">
-                        <Bot className="h-4 w-4 text-blue-600" />
+                      <AvatarFallback className="bg-yellow-100">
+                        <Bot className="h-4 w-4 text-yellow-600" />
                       </AvatarFallback>
                     </Avatar>
                     <div className="bg-gray-100 rounded-lg p-3">
@@ -320,7 +320,7 @@ const Chatbot: React.FC<ChatbotProps> = ({ userRole = 'intern', userDepartment =
                     className="cursor-pointer"
                     onClick={() => handleSuggestionClick(suggestion)}
                   >
-                    <Badge variant="outline" className="hover:bg-blue-50 text-xs justify-start p-2 w-full">
+                    <Badge variant="outline" className="hover:bg-yellow-50 text-xs justify-start p-2 w-full">
                       <HelpCircle className="h-3 w-3 mr-1" />
                       {suggestion}
                     </Badge>
