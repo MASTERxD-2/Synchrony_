@@ -15,6 +15,7 @@ import RegistrationPage from "./pages/Registration";
 import SettingsPage from "./pages/Settings";
 import EnhancedChatbot from "./components/EnhancedChatbot";
 import { ChatbotProvider } from "./contexts/ChatbotContext";
+import MyTasksPage from "./pages/MyTasksPage";
 
 const queryClient = new QueryClient();
 
@@ -35,6 +36,7 @@ const App = () => (
             <Route path="/onboardingpage" element={<Onboarding />} />
             <Route path="/registration" element={<RegistrationPage />} />
             <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/mytasks" element={<MyTasksPage />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
