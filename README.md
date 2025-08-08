@@ -1,3 +1,74 @@
+# Synchrony – Unified Developer Productivity Platform
+
+Synchrony is a developer productivity dashboard that integrates multiple tools into one unified interface.  
+It provides features like project management, calendar syncing, developer analytics, real-time chat,  
+and AI-powered code review.
+
+---
+
+## 🚀 Features
+
+- **📅 Calendar Integration** – Sync faculty and student schedules with Google Calendar and Outlook APIs.
+- **📊 Developer Analytics Dashboard** – Track commits, pull requests, lines of code, and deployments from GitHub GraphQL API.
+- **💬 Real-Time Chat System** – Built with Socket.IO for team communication and collaboration.
+- **🤖 Code Review Engine** – Automated analysis of pull requests with AI-based suggestions.
+- **🧠 AI-Powered Project Insights** – Upload project ZIPs and get an AI-generated summary.
+- **⚡ CI/CD Pipeline Builder** – Drag-and-drop GitHub Actions or Jenkins pipeline creation.
+
+---
+
+
+---
+
+## 🛠 Tech Stack
+
+**Frontend**
+- [Vite](https://vitejs.dev/) + [React](https://react.dev/) + TypeScript
+- Tailwind CSS for styling
+- Axios for API calls
+
+**Backend**
+- Flask (Python)
+- OpenAI API for AI code summaries
+- Werkzeug for file handling
+
+**Database & APIs**
+- Supabase for checklist storage
+- Google Calendar API, Outlook API
+- GitHub GraphQL API
+
+---
+
+## ⚙️ Installation & Setup
+
+### 1️⃣ Clone the repository
+```bash
+git clone https://github.com/MASTERxD-2/Synchrony_.git
+cd Synchrony_
+cd backend
+python -m venv venv
+source venv/bin/activate   # (Mac/Linux)
+venv\Scripts\activate      # (Windows)
+pip install -r requirements.txt
+python app.py
+```
+---
+
+### Setup frontend
+``` bash
+cd frontend
+npm install
+npm run dev
+```
+
+---
+Project Dashboard
+<img width="1512" height="824" alt="image" src="https://github.com/user-attachments/assets/ca399423-e2b5-423f-a606-fab9083a3ced" />
+
+
+
+
+
 # Onboarding Portal with Personalized Checklists
 
 A comprehensive onboarding portal that generates personalized checklists based on user roles, departments, and experience levels. Built with React.js, TypeScript, and Tailwind CSS.
